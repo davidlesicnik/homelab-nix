@@ -1,56 +1,32 @@
 # homelab-nix
 
-NixOS homelab configs. Hosts check `main` every minute and apply new commits.
+NixOS homelab configs. GitOps checks `main` every minute and applies new commits.
 
-## Rootless Podman host
+[Container stacks](stacks/README.md) · [Encrypted secrets](secrets.md)
 
-Proxmox, x86-64, SeaBIOS. SSH as `containers@192.168.10.20` to run containers,
-or `root@192.168.10.20` for host administration, using your key.
-The hostname and flake target remain `docker` so existing GitOps keeps working.
+## Host: `docker`
+
+Proxmox, x86-64, SeaBIOS.
 
 | Setting | Value |
 | --- | --- |
+| SSH | `root@192.168.10.20` or `containers@192.168.10.20` |
 | Network | `ens18`, `192.168.10.20/24` |
 | Gateway / DNS | `192.168.10.1` / `192.168.10.9` |
 | OS disk | `scsi0`, 32 GiB |
 | Container disk | `scsi1`, 200 GiB, ext4 at `/srv` |
-| Container user | `containers`, UID/GID `1000`, home `/srv/podman` |
-| Rootless storage | `/srv/podman/.local/share/containers/storage` |
-| Rootless API socket | `/run/user/1000/podman/podman.sock` |
+| Container user | UID/GID `1000`, home `/srv/podman` |
+| Podman socket | `/run/user/1000/podman/podman.sock` |
 
-Reserve `.20` or exclude it from the router's DHCP pool.
-Container storage is excluded from Disko, automatic formatting and pruning are
-off, and the container user's services require the data mount. Keep separate
-backups of important volumes. The user has subordinate UID/GID range
-`100000–165535`, no administrative groups, and lingering enabled so user services
-start at boot and continue after logout. Docker and the rootful Podman API are
-disabled.
+Reserve `.20` outside DHCP. Run Podman as `containers`; Docker and the rootful
+API are disabled. Container services require `/srv`. Back up important volumes.
 
-## Fresh installation
+## Install
 
-Boot the NixOS ISO with networking. Verify your public key in
-`hosts/docker/default.nix` and push changes to `main` before installing.
-**This procedure assumes empty disks. For existing data, see Reinstall below.**
+Boot the NixOS ISO with networking. Check the SSH key in
+`hosts/docker/default.nix` and push changes before installing.
 
-### 1. SSH into the live ISO (optional)
-
-In the Proxmox console:
-
-```sh
-sudo passwd nixos
-sudo systemctl start sshd
-ip -4 -br addr
-```
-
-On your workstation, replace `VM_IP` with the ISO's address:
-
-```sh
-ssh nixos@VM_IP
-```
-
-### 2. Clone and check
-
-Run on the live ISO as `nixos`; stay in the repository for the remaining steps:
+### 1. Clone and verify disks
 
 ```sh
 nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#git --command git clone https://github.com/davidlesicnik/homelab-nix.git
@@ -60,31 +36,26 @@ lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
 nix --extra-experimental-features 'nix-command flakes' flake check --no-build --all-systems path:.
 ```
 
-Confirm `drive-scsi0` is the 32 GiB OS disk and `drive-scsi1` is the 200 GiB data
-disk. Stop if the IDs or layout differ. No hardware-config generation is needed.
+Confirm `drive-scsi0` is the OS disk and `drive-scsi1` is the data disk.
 
-### 3. Prepare the OS disk only
+### 2. Format and mount the OS disk
 
-Keep both `sudo` and the standalone `--` after `path:.#disko`:
+**This erases the OS disk.** For an existing installation, see Reinstall below.
 
 ```sh
 sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- --mode format,mount --flake "path:$PWD#docker"
 findmnt --mountpoint /mnt
 ```
 
-### 4. Initialize container storage — ONCE
+### 3. Initialize an empty data disk only
 
-**Skip this step if the data filesystem already exists, including on reinstalls
-and when switching from Docker.**
+**Skip if the data filesystem already exists. Never run this on reinstalls.**
 
 ```sh
 sudo bash scripts/initialize-container-disk.sh
 ```
 
-Check the disk identity and type the exact confirmation printed by the script.
-It refuses existing storage; do not bypass its checks.
-
-### 5. Mount container storage
+### 4. Mount data, restore the host's age key, install
 
 ```sh
 sudo udevadm settle
@@ -93,113 +64,53 @@ sudo mount /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1 /mnt/srv
 findmnt --mountpoint /mnt/srv
 ```
 
-Confirm a separate ext4 mount from `scsi1`. A mount failure is not a reason to format.
-
-### 6. Restore the secrets identity and install
-
-The Caddy credential is encrypted in Git. Restore this host's backed-up age
-identity before installing; this is the only secret that must be provisioned
-separately. See [encrypted secrets](secrets.md) for key generation and recovery.
+Confirm a separate ext4 mount before continuing. The age key must match the
+host recipient in `.sops.yaml`.
 
 ```sh
 sudo install -D -m 0600 /path/to/backed-up-host-key.txt /mnt/var/lib/sops-nix/key.txt
-```
-
-Use the identity whose public recipient is registered for this host in
-`.sops.yaml`. A newly generated, unregistered key cannot decrypt its secrets.
-
-```sh
 sudo mkdir -p /mnt/etc/nixos
 sudo cp -a . /mnt/etc/nixos/
 sudo chown -R root:root /mnt/etc/nixos
 sudo nixos-install --flake /mnt/etc/nixos#docker
 ```
 
-Set the root console password. After installation succeeds:
+After installation succeeds, run `sudo poweroff`, eject the ISO, and boot from
+`scsi0` with `scsi1` attached.
 
-```sh
-sudo poweroff
-```
+### 5. Verify
 
-Eject the ISO in Proxmox, boot from `scsi0`, and keep `scsi1` attached.
-
-### 7. Connect and verify
-
-On your workstation:
-
-```sh
-ssh -i ~/.ssh/id_ed25519 containers@192.168.10.20
-```
-
-On the installed host:
+SSH as `containers@192.168.10.20`:
 
 ```sh
 findmnt --mountpoint /srv
-id
-podman info --format '{{.Host.Security.Rootless}} {{.Store.GraphRoot}} {{.Store.GraphDriverName}}'
+podman info --format '{{.Host.Security.Rootless}} {{.Store.GraphRoot}}'
 systemctl --user is-active podman.socket
-podman compose version
-podman run --rm docker.io/library/alpine:latest id
+podman ps
 ```
 
-Expect UID/GID `1000`,
-`true /srv/podman/.local/share/containers/storage overlay`, and an `active`
-user socket. The Alpine command should succeed; `uid=0` inside the container maps
-to the unprivileged `containers` user on the host.
+Expect rootless `true`, storage under `/srv/podman`, and an active socket.
 
-Run `podman` and `podman compose` as `containers`. Running them as root uses a
-different, rootful store. Docker API clients can use
-`DOCKER_HOST=unix:///run/user/1000/podman/podman.sock` from this user's session.
+## Reinstall
 
-Declarative containers live in [`stacks/<name>/`](stacks/README.md), with each
-stack imported explicitly by its host. NixOS manages their system services as
-the rootless `containers` user, including startup, configuration changes and
-shutdown when the data disk is unavailable. Caddy is the first managed stack;
-see the [stack documentation](stacks/README.md#caddy) for configuration and secrets.
-
-For manually managed containers, the user `podman-restart.service` restores
-containers with `--restart=always` or `--restart=unless-stopped` at boot. Existing
-Compose files may remain in their separate repository. For explicit user
-services, place Quadlets under `~/.config/containers/systemd/` with
-`[Install] WantedBy=default.target`.
-
-Rootless published ports must be `1024` or higher by default (for example,
-`8080:80`). The Caddy stack lowers this threshold to `80` and opens TCP 80/443
-and UDP 443. Other exposed services must open their host firewall ports explicitly.
-See the [Podman rootless guide](https://github.com/containers/podman/blob/v5.8.9/docs/tutorials/rootless_tutorial.md)
-and [Quadlet documentation](https://docs.podman.io/en/stable/markdown/podman-systemd.unit.5.html).
-
-## Reinstall without losing container data
-
-**Never rerun container disk initialization.** To reuse the OS filesystem, clone the repo
-in the live ISO and mount it without formatting:
+Preserve `scsi1`; never initialize it again. To reuse the OS filesystem:
 
 ```sh
 sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- --mode mount --flake "path:$PWD#docker"
 ```
 
-Continue from **step 5**. For an empty replacement OS disk, use step 3 instead,
-then step 5. Preserve `scsi1` and its backing storage throughout.
+Continue at install step 4. For an empty replacement OS disk, start at step 2,
+skip step 3, then continue at step 4.
 
 ## Updates
 
-Edit, commit and push from your workstation. The host checks Git every minute,
-rebuilding only for a new commit. Runs do not overlap; reboots remain manual.
-To check immediately or inspect logs, run on the host as root:
+Commit and push to `main`. To check immediately, run as root:
 
 ```sh
 systemctl start nixos-upgrade.service
 journalctl -u nixos-upgrade.service -n 30 --no-pager
 ```
 
-Pause automatic updates with `systemctl stop nixos-upgrade.timer`.
-
-Update `flake.lock` intentionally with `nix flake update`; keep `system.stateVersion`
-unchanged. Keep the container user's UID/GID and subordinate ranges unchanged on
-reinstalls so existing ownership remains valid. Rebuilds do not format disks.
-Rootless images and named volumes use the container disk; bind
-mounts use the host path you choose.
-
-Hosts live in `hosts/<name>/`, shared modules in `modules/nixos/`, and host
-registrations in `flake.nix`. GitOps reads the remote branch directly; `/etc/nixos`
-is the installation checkout and is not automatically pulled.
+Pause with `systemctl stop nixos-upgrade.timer`. Reboots are manual.
+Update dependencies with `nix flake update`; keep `system.stateVersion` and
+container UID/GID mappings unchanged. GitOps uses the remote branch, not `/etc/nixos`.

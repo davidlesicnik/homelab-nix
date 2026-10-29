@@ -1,5 +1,4 @@
-Add extra sites as `*.caddy` files in this directory. The main Caddyfile imports
-all of them automatically. For example, `example.caddy` could contain:
+Add `*.caddy` files here. Join upstreams to `proxy`, then commit and push to `main`.
 
 ```caddyfile
 example.lesicnik.eu {
@@ -7,7 +6,3 @@ example.lesicnik.eu {
     reverse_proxy example:8080
 }
 ```
-
-The upstream container must join the rootless `proxy` network. Commit new files
-along with your changes and push to `main`; GitOps validates the configuration
-and restarts Caddy when applying the new NixOS generation.

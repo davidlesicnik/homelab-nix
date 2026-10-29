@@ -144,6 +144,8 @@ systemctl start nixos-upgrade.service
 journalctl -u nixos-upgrade.service -n 30 --no-pager
 ```
 
+Pause automatic updates with `systemctl stop nixos-upgrade.timer`.
+
 Update `flake.lock` intentionally with `nix flake update`; keep `system.stateVersion`
 unchanged. Rebuilds do not format disks. Named volumes use the Docker disk; bind
 mounts use the host path you choose.

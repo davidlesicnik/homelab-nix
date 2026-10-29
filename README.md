@@ -5,7 +5,7 @@ QEMU/Proxmox VM named `docker`, booting with legacy BIOS / SeaBIOS.
 
 Start with [Fresh installation](#fresh-installation-of-the-docker-host).
 For existing volumes, use [OS reinstallation](#reinstalling-the-os-while-keeping-docker-data).
-After installation, follow [GitOps updates](#gitops-updates).
+After installation, follow [Manual updates](#manual-updates).
 
 | Disk | Layout | Purpose |
 | --- | --- | --- |
@@ -16,18 +16,30 @@ The OS device is `/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0`.
 The Docker device is `/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1`.
 These fixed IDs avoid dependence on `/dev/sda` and `/dev/sdb` ordering. The
 OS root mount uses its partition label. No swap is configured.
-Networking uses DHCP. SSH allows keys only; the NixOS firewall opens port 22.
+The installed host uses static IPv4 networking on `ens18`:
+
+| Setting | Value |
+| --- | --- |
+| Address | `192.168.10.20/24` |
+| Gateway | `192.168.10.1` |
+| DNS server | `192.168.10.9` |
+
+These settings belong to `hosts/docker/default.nix`; shared server defaults
+still use DHCP for future hosts. The live installer uses its own DHCP address.
+Keep `192.168.10.20` outside the router's DHCP pool or reserve it for this VM
+to prevent another device receiving the same address.
+SSH allows keys only; the NixOS firewall opens port 22.
 Docker and its Compose plugin are included. Docker uses `overlay2` and rotating
 `local` logs, and requires the data mount before starting. The containerd image
 store is explicitly disabled to keep image storage with the rest of Docker data.
 Automatic Docker pruning is disabled. Old Nix generations are collected weekly
 after 14 days.
 
-Git is the source of truth. Once installed, the host pulls `main` from this
-repository every 15 minutes (plus up to 60 seconds of jitter) and applies
-`nixosConfigurations.docker`. Updates use the committed `flake.lock` without
-updating inputs on the host. Reboots remain manual. The repository is currently
-public, so pulling over HTTPS needs no credentials.
+Git is the source of truth. The Docker host is currently updated manually;
+automatic Git pulls are disabled while the deployment workflow is being built.
+The optional GitOps module remains available for later. Updates use the committed
+`flake.lock`, and reboots remain manual. The repository is currently public,
+so pulling over HTTPS needs no credentials.
 
 ## Docker data protection
 
@@ -60,16 +72,16 @@ hosts/docker/hardware-configuration.nix
 hosts/docker/disk-config.nix      # OS layout and mount-only Docker filesystem
 modules/nixos/common.nix          # Shared minimal server settings
 modules/nixos/docker.nix          # Docker service and data-mount dependency
-modules/nixos/gitops.nix          # Pull and apply this host's configuration from Git
+modules/nixos/gitops.nix          # Optional pull workflow; not imported by Docker yet
 scripts/initialize-docker-disk.sh # Explicit, guarded initialization of EMPTY scsi1
 tests/initialize-docker-disk.sh   # Safety checks with mocked disk tools
 ```
 
 Add future machines under `hosts/<name>/` and expose them as another entry in
 `nixosConfigurations`. Import the shared modules each machine needs; hardware,
-disks and `system.stateVersion` remain specific to each host. The GitOps module
-selects a configuration using `networking.hostName`, so keep that name aligned
-with its entry in `nixosConfigurations`.
+disks and `system.stateVersion` remain specific to each host. If you later enable
+the GitOps module, it selects a configuration using `networking.hostName`, so keep
+that name aligned with its entry in `nixosConfigurations`.
 
 ## Fresh installation of the Docker host
 
@@ -88,7 +100,8 @@ Check that `users.users.root.openssh.authorizedKeys.keys` in
 `hosts/docker/default.nix` contains your **complete public key line**. The current
 configuration already includes David's key. Keep the matching private key on your
 workstation. Commit and push any configuration changes, including `flake.lock`,
-to `main` before installing: the host will later pull that branch automatically.
+to `main` before installing. The current host applies updates only when you
+explicitly rebuild it.
 
 ### 1. Boot the ISO and optionally connect over SSH
 
@@ -254,15 +267,16 @@ password set during installation and check its IP:
 ip -4 -br addr
 ```
 
-On your workstation, connect using your SSH key:
+The installed host uses `192.168.10.20`, which can differ from the ISO's DHCP
+address. On your workstation, connect using your SSH key:
 
 ```sh
-ssh root@VM_IP
+ssh root@192.168.10.20
 ```
 
-Replace `VM_IP` with the installed host's address. The installed configuration
-does not create a `nixos` user. If SSH reports a changed host key, see the
-troubleshooting section before replacing the saved ISO key.
+The installed configuration does not create a `nixos` user. If SSH reports a
+changed host key, see the troubleshooting section before replacing the saved
+ISO key.
 
 ### 9. Verify the installed host
 
@@ -275,7 +289,6 @@ docker info --format '{{.DockerRootDir}} {{.Driver}} {{.LoggingDriver}}'
 docker compose version
 docker run --rm hello-world
 docker volume ls
-systemctl list-timers nixos-upgrade.timer
 nixos-version --configuration-revision
 ```
 
@@ -284,8 +297,7 @@ Expected results:
 - `/var/lib/docker` is a separate ext4 mount from `scsi1`.
 - Docker is `active` and reports `/var/lib/docker overlay2 local`.
 - Compose reports its version, and the disposable `hello-world` container succeeds.
-- The GitOps timer has a next run, and the configuration revision identifies
-  the Git commit used for installation.
+- The configuration revision identifies the Git commit used for installation.
 
 Named volumes live under `/var/lib/docker/volumes` on the data disk. Bind mounts
 use the host path you specify; paths under `/home` or `/opt` still use the OS disk.
@@ -313,8 +325,8 @@ Only after confirming that this is the VM you installed, remove its saved ISO
 key **on your workstation**, reconnect, and compare the presented fingerprint:
 
 ```sh
-ssh-keygen -R VM_IP
-ssh root@VM_IP
+ssh-keygen -R 192.168.10.20
+ssh root@192.168.10.20
 ```
 
 ## Reinstalling the OS while keeping Docker data
@@ -338,11 +350,11 @@ initializer for a reinstall. Docker reuses the volumes and other data on `scsi1`
 This configuration expects ext4 on the whole data disk; an existing disk with a
 different layout needs a matching mount declaration in Git, not reformatting.
 
-## GitOps updates
+## Manual updates
 
 Make changes in your workstation checkout, validate them and commit/push to
-`main`. Each host fetches that branch and applies its own configuration on the
-next timer run. Updating `flake.lock` is a repository change too:
+`main`. Then explicitly pull and rebuild on the installed host. Updating
+`flake.lock` is a repository change too:
 
 ```sh
 nix flake update
@@ -353,19 +365,18 @@ git push origin main
 ```
 
 Omit `nix flake update` when only changing host configuration. On the installed
-host, apply the latest committed state immediately or inspect automatic updates:
+host, run as root:
 
 ```sh
-sudo systemctl start nixos-upgrade.service
-systemctl list-timers nixos-upgrade.timer
-journalctl -u nixos-upgrade.service -n 50 --no-pager
+cd /etc/nixos
+git pull --ff-only
+nixos-rebuild switch --flake /etc/nixos#docker
 nixos-version --configuration-revision
 ```
 
-The deployed Git revision is recorded in the system generation. The copy under
-`/etc/nixos` is a bootstrap checkout; the timer fetches the remote branch directly.
-Edit the repository on your workstation for persistent changes. Direct rebuilds
-can also pull from Git without updating a local checkout:
+The deployed Git revision is recorded in the system generation. Keep `/etc/nixos`
+as the host's checkout and make persistent edits on your workstation. Direct
+manual rebuilds can also read the committed configuration from Git:
 
 ```sh
 sudo nixos-rebuild switch --refresh --no-update-lock-file \
@@ -373,24 +384,31 @@ sudo nixos-rebuild switch --refresh --no-update-lock-file \
 ```
 
 Rebuilds apply configuration and mount existing filesystems. Neither Disko nor
-the Docker disk initializer is part of a GitOps update.
+the Docker disk initializer is part of an update.
 Keep `system.stateVersion` at the initial installation version when updating inputs.
 
-To undo a bad deployment, revert its commit on `main` and let the host pull again.
-For immediate recovery, stop the timer before switching to the previous generation;
-the timer would otherwise reapply the bad commit:
+To undo a bad deployment, revert its commit on `main`, then pull and rebuild.
+For immediate recovery, switch to the previous generation from the VM console:
 
 ```sh
-sudo systemctl stop nixos-upgrade.timer nixos-upgrade.service
 sudo nixos-rebuild switch --rollback
 ```
 
-After the fix is committed and pushed, start `nixos-upgrade.service` and then
-`nixos-upgrade.timer` again. A failed evaluation or build leaves the running
-generation unchanged; inspect the journal for activation failures. Kernel changes
-take effect on the next manual reboot. If the repository becomes private, provision
+An older generation can have a different IP address and may enable the earlier
+GitOps timer; stop that timer if rolling back to it. After the fix is committed
+and pushed, pull and rebuild manually. A failed evaluation or build leaves the
+running generation unchanged. Kernel changes take effect on the next manual
+reboot. If the repository becomes private, provision
 read-only Git credentials on each host before changing the pull URL; keep those
 credentials out of Nix files.
+
+## Optional GitOps workflow
+
+`modules/nixos/gitops.nix` is prepared but not currently imported by the Docker
+host. When the deployment workflow is ready, enable its import in
+`hosts/docker/default.nix` and apply that configuration manually. It will then
+pull `main` every 15 minutes, with up to 60 seconds of jitter, select the host's
+configuration by hostname, honor `flake.lock`, and leave reboots manual.
 
 Run the initializer's safety tests on a workstation with Bash:
 

@@ -2,20 +2,69 @@
 
 NixOS homelab configs. Hosts check `main` every minute and apply new commits.
 
-## Docker host
+## Rootless Podman host
 
-Proxmox, x86-64, SeaBIOS. SSH: `root@192.168.10.20` using your key.
+Proxmox, x86-64, SeaBIOS. SSH as `containers@192.168.10.20` to run containers,
+or `root@192.168.10.20` for host administration, using your key.
+The hostname and flake target remain `docker` so existing GitOps keeps working.
 
 | Setting | Value |
 | --- | --- |
 | Network | `ens18`, `192.168.10.20/24` |
 | Gateway / DNS | `192.168.10.1` / `192.168.10.9` |
 | OS disk | `scsi0`, 32 GiB |
-| Docker disk | `scsi1`, 200 GiB, ext4 at `/var/lib/docker` |
+| Container disk | `scsi1`, 200 GiB, ext4 at `/srv` |
+| Container user | `containers`, UID/GID `1000`, home `/srv/containers` |
+| Rootless storage | `/srv/containers/.local/share/containers/storage` |
+| Rootless API socket | `/run/user/1000/podman/podman.sock` |
 
 Reserve `.20` or exclude it from the router's DHCP pool.
-Docker storage is excluded from Disko, automatic formatting and pruning are off,
-and Docker requires the data mount. Keep separate backups of important volumes.
+Container storage is excluded from Disko, automatic formatting and pruning are
+off, and the container user's services require the data mount. Keep separate
+backups of important volumes. The user has subordinate UID/GID range
+`100000–165535`, no administrative groups, and lingering enabled so user services
+start at boot and continue after logout. Docker and the rootful Podman API are
+disabled.
+
+## Switch an existing Docker host
+
+The existing `scsi1` filesystem is remounted from `/var/lib/docker` to `/srv`;
+it is **never formatted or recursively chowned**. Its old Docker files stay at the
+root of that filesystem, separate from the new `/srv/containers` home.
+The mount directory becomes `0710 root:containers` so this user can reach its
+home; existing files and volume ownership stay intact.
+**Do not run the disk initializer during this switch.**
+
+Before publishing the configuration, pause updates and inventory any workloads
+on the host as root:
+
+```sh
+systemctl stop nixos-upgrade.timer
+docker ps -a
+docker volume ls
+```
+
+If workloads exist, back up their data and keep their Compose definitions.
+Podman does not import Docker containers, images or volumes automatically; plan
+to recreate them as `containers` and restore data into new rootless volumes.
+Bind-mount ownership must match the new user's mappings; `podman unshare` helps
+inspect those mappings. Preserve the old data until the replacements are verified.
+
+Publish the configuration, then apply it from the root SSH session:
+
+```sh
+systemctl stop docker.service docker.socket
+systemctl start nixos-upgrade.service
+journalctl -u nixos-upgrade.service -n 30 --no-pager
+findmnt --mountpoint /srv
+systemctl is-active user@1000.service
+```
+
+After a successful switch, verify Podman as described in step 7 below and resume
+updates with `systemctl start nixos-upgrade.timer`. Reboot and verify again before
+relying on unattended startup. If the mount cannot move because a process is
+using it, leave initialization alone; resolve the busy mount or reboot after a
+successful rebuild.
 
 ## Fresh installation
 
@@ -63,24 +112,25 @@ sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- 
 findmnt --mountpoint /mnt
 ```
 
-### 4. Initialize Docker storage — ONCE
+### 4. Initialize container storage — ONCE
 
-**Skip this step if the Docker filesystem already exists, including on reinstalls.**
+**Skip this step if the data filesystem already exists, including on reinstalls
+and when switching from Docker.**
 
 ```sh
-sudo bash scripts/initialize-docker-disk.sh
+sudo bash scripts/initialize-container-disk.sh
 ```
 
 Check the disk identity and type the exact confirmation printed by the script.
 It refuses existing storage; do not bypass its checks.
 
-### 5. Mount Docker storage
+### 5. Mount container storage
 
 ```sh
 sudo udevadm settle
-sudo mkdir -p /mnt/var/lib/docker
-sudo mount /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1 /mnt/var/lib/docker
-findmnt --mountpoint /mnt/var/lib/docker
+sudo mkdir -p /mnt/srv
+sudo mount /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1 /mnt/srv
+findmnt --mountpoint /mnt/srv
 ```
 
 Confirm a separate ext4 mount from `scsi1`. A mount failure is not a reason to format.
@@ -107,23 +157,42 @@ Eject the ISO in Proxmox, boot from `scsi0`, and keep `scsi1` attached.
 On your workstation:
 
 ```sh
-ssh -i ~/.ssh/id_ed25519 root@192.168.10.20
+ssh -i ~/.ssh/id_ed25519 containers@192.168.10.20
 ```
 
 On the installed host:
 
 ```sh
-findmnt --mountpoint /var/lib/docker
-systemctl is-active docker
-docker info --format '{{.DockerRootDir}} {{.Driver}} {{.LoggingDriver}}'
-docker compose version
+findmnt --mountpoint /srv
+id
+podman info --format '{{.Host.Security.Rootless}} {{.Store.GraphRoot}} {{.Store.GraphDriverName}}'
+systemctl --user is-active podman.socket
+podman compose version
+podman run --rm docker.io/library/alpine:latest id
 ```
 
-Expect the data mount, `active`, and `/var/lib/docker overlay2 local`.
+Expect UID/GID `1000`,
+`true /srv/containers/.local/share/containers/storage overlay`, and an `active`
+user socket. The Alpine command should succeed; `uid=0` inside the container maps
+to the unprivileged `containers` user on the host.
 
-## Reinstall without losing Docker data
+Run `podman` and `podman compose` as `containers`. Running them as root uses a
+different, rootful store. Docker API clients can use
+`DOCKER_HOST=unix:///run/user/1000/podman/podman.sock` from this user's session.
 
-**Never rerun Docker initialization.** To reuse the OS filesystem, clone the repo
+The user `podman-restart.service` restores containers with `--restart=always`
+or `--restart=unless-stopped` at boot. Compose files and deployment automation
+remain in their separate repository. For explicit user services, place Quadlets
+under `~/.config/containers/systemd/` with `[Install] WantedBy=default.target`.
+
+Rootless published ports must be `1024` or higher by default (for example,
+`8080:80`). Open any required host firewall ports explicitly in the host config.
+See the [Podman rootless guide](https://github.com/containers/podman/blob/v5.8.9/docs/tutorials/rootless_tutorial.md)
+and [Quadlet documentation](https://docs.podman.io/en/stable/markdown/podman-systemd.unit.5.html).
+
+## Reinstall without losing container data
+
+**Never rerun container disk initialization.** To reuse the OS filesystem, clone the repo
 in the live ISO and mount it without formatting:
 
 ```sh
@@ -147,7 +216,9 @@ journalctl -u nixos-upgrade.service -n 30 --no-pager
 Pause automatic updates with `systemctl stop nixos-upgrade.timer`.
 
 Update `flake.lock` intentionally with `nix flake update`; keep `system.stateVersion`
-unchanged. Rebuilds do not format disks. Named volumes use the Docker disk; bind
+unchanged. Keep the container user's UID/GID and subordinate ranges unchanged on
+reinstalls so existing ownership remains valid. Rebuilds do not format disks.
+Rootless images and named volumes use the container disk; bind
 mounts use the host path you choose.
 
 Hosts live in `hosts/<name>/`, shared modules in `modules/nixos/`, and host

@@ -8,7 +8,7 @@ test_dir=$(mktemp -d)
 trap 'rm -rf "$test_dir"' EXIT
 test_device=/dev/disk/by-id/test-empty-disk
 
-for scenario in blank existing-label filesystem partition-table partitioned mounted swap not-disk inspection-error declined no-input changed; do
+for scenario in blank existing-label existing-docker-label filesystem partition-table partitioned mounted swap not-disk inspection-error declined no-input changed; do
   marker="$test_dir/$scenario.formatted"
   counter="$test_dir/$scenario.inspections"
   confirmation="INITIALIZE $test_device"
@@ -16,9 +16,11 @@ for scenario in blank existing-label filesystem partition-table partitioned moun
   [[ "$scenario" != no-input ]] || confirmation=''
 
   if (
-    source "$repo_root/scripts/initialize-docker-disk.sh"
+    source "$repo_root/scripts/initialize-container-disk.sh"
 
-    docker_data_exists() { [[ "$scenario" == existing-label ]]; }
+    filesystem_label_exists() {
+      [[ "$scenario:$1" == existing-label:container-data || "$scenario:$1" == existing-docker-label:docker-data ]]
+    }
 
     lsblk() {
       local output=''
@@ -72,7 +74,7 @@ for scenario in blank existing-label filesystem partition-table partitioned moun
   ) > "$test_dir/$scenario.log" 2>&1; then
     [[ "$scenario" == blank ]] || { cat "$test_dir/$scenario.log"; exit 1; }
     [[ -f "$marker" ]] || { printf 'Initializer did not run for blank disk\n'; exit 1; }
-    [[ "$(cat "$marker")" == "-L docker-data $test_device" ]] || exit 1
+    [[ "$(cat "$marker")" == "-L container-data $test_device" ]] || exit 1
   else
     [[ "$scenario" != blank ]] || { cat "$test_dir/$scenario.log"; exit 1; }
     [[ ! -e "$marker" ]] || { printf 'Formatter ran for unsafe case: %s\n' "$scenario"; exit 1; }
@@ -81,7 +83,7 @@ for scenario in blank existing-label filesystem partition-table partitioned moun
 done
 
 for unsupported_device in /dev/sdb /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0; do
-  if bash "$repo_root/scripts/initialize-docker-disk.sh" "$unsupported_device" > "$test_dir/arguments.log" 2>&1; then
+  if bash "$repo_root/scripts/initialize-container-disk.sh" "$unsupported_device" > "$test_dir/arguments.log" 2>&1; then
     printf 'Arbitrary device argument was accepted\n'
     exit 1
   fi

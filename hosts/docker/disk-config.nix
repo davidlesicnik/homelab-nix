@@ -1,6 +1,6 @@
 { config, ... }:
 {
-  # Disko manages ONLY the OS disk. Docker storage must never be added here.
+  # Disko manages ONLY the OS disk. Container storage must never be added here.
   # Fixed Proxmox SCSI identities prevent /dev/sdX enumeration changes.
   disko.devices.disk = {
     system = {
@@ -28,7 +28,8 @@
   };
 
   # Mount an existing filesystem; NixOS must never create or format this disk.
-  fileSystems."/var/lib/docker" = {
+  # Reuse the same data filesystem, including any old Docker data, at /srv.
+  fileSystems."/srv" = {
     device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1";
     fsType = "ext4";
     autoFormat = false;
@@ -38,15 +39,15 @@
   assertions = [
     {
       assertion = builtins.attrNames config.disko.devices.disk == [ "system" ];
-      message = "Docker host: Disko may manage only the OS disk; keep Docker data outside Disko.";
+      message = "Container host: Disko may manage only the OS disk; keep container data outside Disko.";
     }
     {
-      assertion = !config.fileSystems."/var/lib/docker".autoFormat;
-      message = "Docker host: automatic formatting of Docker storage is forbidden.";
+      assertion = !config.fileSystems."/srv".autoFormat;
+      message = "Container host: automatic formatting of container storage is forbidden.";
     }
     {
-      assertion = config.disko.devices.disk.system.device != config.fileSystems."/var/lib/docker".device;
-      message = "Docker host: the OS and Docker data disk must be different devices.";
+      assertion = config.disko.devices.disk.system.device != config.fileSystems."/srv".device;
+      message = "Container host: the OS and container data disk must be different devices.";
     }
   ];
 }

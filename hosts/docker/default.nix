@@ -2,8 +2,7 @@
 {
   imports = [
     ../../modules/nixos/common.nix
-    # Enable GitOps after the deployment workflow is ready:
-    # ../../modules/nixos/gitops.nix
+    ../../modules/nixos/gitops.nix
     ../../modules/nixos/docker.nix
     ./hardware-configuration.nix
     ./disk-config.nix

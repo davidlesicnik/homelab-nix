@@ -1,6 +1,6 @@
 # homelab-nix
 
-NixOS homelab configs. Updates are manual; automatic GitOps pulls are disabled.
+NixOS homelab configs. Hosts check `main` every minute and apply new commits.
 
 ## Docker host
 
@@ -133,14 +133,15 @@ sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- 
 Continue from **step 5**. For an empty replacement OS disk, use step 3 instead,
 then step 5. Preserve `scsi1` and its backing storage throughout.
 
-## Manual updates
+## Updates
 
-Edit, commit and push from your workstation. Then run on the host as root:
+Edit, commit and push from your workstation. The host checks Git every minute,
+rebuilding only for a new commit. Runs do not overlap; reboots remain manual.
+To check immediately or inspect logs, run on the host as root:
 
 ```sh
-cd /etc/nixos
-git pull --ff-only
-nixos-rebuild switch --flake /etc/nixos#docker
+systemctl start nixos-upgrade.service
+journalctl -u nixos-upgrade.service -n 30 --no-pager
 ```
 
 Update `flake.lock` intentionally with `nix flake update`; keep `system.stateVersion`
@@ -148,4 +149,5 @@ unchanged. Rebuilds do not format disks. Named volumes use the Docker disk; bind
 mounts use the host path you choose.
 
 Hosts live in `hosts/<name>/`, shared modules in `modules/nixos/`, and host
-registrations in `flake.nix`. The optional GitOps module is currently not imported.
+registrations in `flake.nix`. GitOps reads the remote branch directly; `/etc/nixos`
+is the installation checkout and is not automatically pulled.

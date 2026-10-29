@@ -26,46 +26,6 @@ backups of important volumes. The user has subordinate UID/GID range
 start at boot and continue after logout. Docker and the rootful Podman API are
 disabled.
 
-## Switch an existing Docker host
-
-The existing `scsi1` filesystem is remounted from `/var/lib/docker` to `/srv`;
-it is **never formatted or recursively chowned**. Its old Docker files stay at the
-root of that filesystem, separate from the new `/srv/podman` home.
-The mount directory becomes `0710 root:containers` so this user can reach its
-home; existing files and volume ownership stay intact.
-**Do not run the disk initializer during this switch.**
-
-Before publishing the configuration, pause updates and inventory any workloads
-on the host as root:
-
-```sh
-systemctl stop nixos-upgrade.timer
-docker ps -a
-docker volume ls
-```
-
-If workloads exist, back up their data and keep their Compose definitions.
-Podman does not import Docker containers, images or volumes automatically; plan
-to recreate them as `containers` and restore data into new rootless volumes.
-Bind-mount ownership must match the new user's mappings; `podman unshare` helps
-inspect those mappings. Preserve the old data until the replacements are verified.
-
-Publish the configuration, then apply it from the root SSH session:
-
-```sh
-systemctl stop docker.service docker.socket
-systemctl start nixos-upgrade.service
-journalctl -u nixos-upgrade.service -n 30 --no-pager
-findmnt --mountpoint /srv
-systemctl is-active user@1000.service
-```
-
-After a successful switch, verify Podman as described in step 7 below and resume
-updates with `systemctl start nixos-upgrade.timer`. Reboot and verify again before
-relying on unattended startup. If the mount cannot move because a process is
-using it, leave initialization alone; resolve the busy mount or reboot after a
-successful rebuild.
-
 ## Fresh installation
 
 Boot the NixOS ISO with networking. Verify your public key in

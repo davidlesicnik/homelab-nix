@@ -28,7 +28,7 @@
   };
 
   # Mount an existing filesystem; NixOS must never create or format this disk.
-  # Reuse the same data filesystem, including any old Docker data, at /srv.
+  # Use the existing data filesystem at /srv.
   fileSystems."/srv" = {
     device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1";
     fsType = "ext4";

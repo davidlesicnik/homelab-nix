@@ -46,7 +46,7 @@ in
   };
 
   # All persistent rootless state, including the default graphroot, lives in this
-  # home on the data disk. Never chown existing Docker volumes recursively.
+  # home on the data disk.
   systemd.services.container-home = {
     description = "Prepare the rootless container user's home on the data disk";
     before = [ "${userManager}.service" ];
@@ -59,8 +59,7 @@ in
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      # Docker leaves its filesystem root at 0710 root:root. Allow this group
-      # to traverse the mount without exposing or changing old volume contents.
+      # Allow the container group to traverse the root-owned data mount.
       ExecStartPre = "${pkgs.coreutils}/bin/install -d -m 0710 -o root -g containers /srv";
       ExecStart = "${pkgs.coreutils}/bin/install -d -m 0700 -o containers -g containers ${containerUser.home}";
     };

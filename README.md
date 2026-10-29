@@ -3,6 +3,10 @@
 Minimal NixOS homelab configurations. The first host is an existing x86-64
 QEMU/Proxmox VM named `docker`, booting with legacy BIOS / SeaBIOS.
 
+Start with [Fresh installation](#fresh-installation-of-the-docker-host).
+For existing volumes, use [OS reinstallation](#reinstalling-the-os-while-keeping-docker-data).
+After installation, follow [GitOps updates](#gitops-updates).
+
 | Disk | Layout | Purpose |
 | --- | --- | --- |
 | Proxmox `scsi0` (32 GiB) | GPT, 1 MiB BIOS boot partition, ext4 `/` | NixOS and bootloader |
@@ -67,104 +71,272 @@ disks and `system.stateVersion` remain specific to each host. The GitOps module
 selects a configuration using `networking.hostName`, so keep that name aligned
 with its entry in `nixosConfigurations`.
 
-## Initial installation on the existing VM
+## Fresh installation of the Docker host
 
-Run these commands **inside the VM's NixOS live installer**. There is no VM
-creation step. This procedure is for the confirmed empty disks only.
+This guide installs the existing Proxmox VM. It assumes an x86-64 NixOS installer
+ISO, **SeaBIOS / legacy BIOS**, a 32 GiB OS disk on `scsi0`, a 200 GiB Docker disk
+on `scsi1`, and a network connection with DHCP and internet access. Keep both
+disks attached. Enable the QEMU guest agent in Proxmox if you want guest status
+and shutdown integration.
 
-Before using the installer, add your public SSH key to
-`users.users.root.openssh.authorizedKeys.keys` in `hosts/docker/default.nix`
-on your workstation. Commit and push all configuration changes, including
-`flake.lock`, to `main`. Without an SSH key, the installed system remains
-accessible through the VM console using the root password set during installation.
+For a first installation, both disks must be empty. If Docker data already
+exists, use [Reinstalling the OS while keeping Docker data](#reinstalling-the-os-while-keeping-docker-data).
 
-1. In the installer, clone the committed configuration:
+### Before booting: workstation
 
-   ```sh
-   nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#git --command \
-     git clone https://github.com/davidlesicnik/homelab-nix.git
-   cd homelab-nix
-   ```
+Check that `users.users.root.openssh.authorizedKeys.keys` in
+`hosts/docker/default.nix` contains your **complete public key line**. The current
+configuration already includes David's key. Keep the matching private key on your
+workstation. Commit and push any configuration changes, including `flake.lock`,
+to `main` before installing: the host will later pull that branch automatically.
 
-2. Confirm the VM uses SeaBIOS and verify the disks:
+### 1. Boot the ISO and optionally connect over SSH
 
-   ```sh
-   lsblk -o NAME,SIZE,MODEL,SERIAL,MOUNTPOINTS
-   ```
+Open the VM's Proxmox console. The installer logs in as `nixos`. Check its IP:
 
-   Confirm that `drive-scsi0` is the 32 GiB OS disk and `drive-scsi1` is the
-   200 GiB Docker disk. The configuration already uses those fixed IDs.
+```sh
+ip -4 -br addr
+```
 
-3. Validate the configuration before writing to the disks:
+If no LAN address is shown, configure networking with `nmtui` before continuing.
+To work over SSH, run these commands **in the VM console**:
 
-   ```sh
-   nix --extra-experimental-features 'nix-command flakes' flake check --no-build path:.
-   ```
+```sh
+sudo passwd nixos
+sudo systemctl start sshd
+```
 
-4. Provision the **empty OS disk only** and mount it below `/mnt`.
-   The Docker disk is outside this Disko configuration:
+Set a temporary installer password. Then, **on your workstation**, replace
+`VM_IP` with the VM's actual LAN address and connect:
 
-   ```sh
-   sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- \
-     --mode format,mount --flake "path:$PWD#docker"
-   ```
+```sh
+ssh nixos@VM_IP
+```
 
-   To reuse an existing OS filesystem, use `--mode mount` instead.
+Use the password you just set. This login is for the live ISO; the repository's
+SSH key and installed root account take effect after installation.
+See the [NixOS installation manual](https://nixos.org/manual/nixos/stable/#sec-installation)
+for the installer's SSH behavior.
 
-5. **Only for the very first installation on empty `scsi1`**, initialize its
-   filesystem explicitly. Skip this command if the Docker disk already has data:
+### 2. Clone the repository: live ISO
 
-   ```sh
-   sudo bash scripts/initialize-docker-disk.sh
-   ```
+Continue in the VM console or SSH session as `nixos`. All installer commands
+below run on the VM. Commands needing root include `sudo`; keep using the
+`nixos` shell and run the steps in order. Stop if a command fails.
 
-   This prints the disk identity and asks you to type
-   `INITIALIZE /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1`.
-   If it refuses, investigate the existing storage; do not wipe signatures or
-   force a format. For both new and existing Docker filesystems, mount the data disk:
+```sh
+cd ~
+nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#git --command git clone --branch main https://github.com/davidlesicnik/homelab-nix.git
+cd homelab-nix
+```
 
-   ```sh
-   sudo udevadm settle
-   sudo mkdir -p /mnt/var/lib/docker
-   sudo mount /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1 /mnt/var/lib/docker
-   findmnt /mnt/var/lib/docker
-   ```
+If you already cloned it, use the existing directory and fetch the latest
+committed instructions instead of cloning again:
 
-6. Keep a copy of the configuration on the installed system and install NixOS:
+```sh
+cd ~/homelab-nix
+nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#git --command git pull --ff-only
+```
 
-   ```sh
-   sudo mkdir -p /mnt/etc/nixos
-   sudo cp -a . /mnt/etc/nixos/
-   sudo nixos-install --flake /mnt/etc/nixos#docker
-   ```
+Stay in this directory through the installation. The commands include the Nix
+feature flags explicitly, so no Nix settings need to be changed on the ISO.
 
-   Set the root console password when prompted. Detach the installer ISO and
-   reboot, with the 32 GiB disk first in the VM's boot order.
+### 3. Verify disks and configuration: live ISO
 
-7. Check the installed host from its console, or over SSH if a key was added:
+```sh
+ls -l /dev/disk/by-id/
+lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
+nix --extra-experimental-features 'nix-command flakes' flake check --no-build --all-systems path:.
+```
 
-   ```sh
-   findmnt /var/lib/docker
-   systemctl is-active docker
-   docker info --format '{{.DockerRootDir}} {{.Driver}} {{.LoggingDriver}}'
-   docker compose version
-   docker run --rm hello-world
-   docker volume ls
-   ```
+Confirm the fixed IDs match this table. Ignore the ISO and its loop device.
 
-   The mount must be the data disk, the Docker root must be `/var/lib/docker`,
-   and named volumes will be below `/var/lib/docker/volumes`.
-   Bind mounts use whichever host
-   path you specify, so a bind mount from `/home` or `/opt` still uses the OS disk.
+| ID suffix | Size | Purpose |
+| --- | --- | --- |
+| `drive-scsi0` | 32 GiB | OS disk; Disko may create its partitions |
+| `drive-scsi1` | 200 GiB | Docker data; separate one-time initialization only |
+
+For a fresh installation, neither target disk should have partitions,
+filesystems or mountpoints. If the device IDs or sizes differ, update the
+host configuration and initializer in Git before proceeding. This repository
+already provides the QEMU hardware configuration and filesystem declarations;
+you do not need to run `nixos-generate-config`.
+
+### 4. Prepare the empty OS disk: live ISO
+
+This creates the OS partitions and ext4 filesystem on **`scsi0` only**, then
+mounts the root filesystem at `/mnt`. It does not manage `scsi1`.
+
+Copy this entire single-line command, including **`sudo`** and the standalone
+**`--` immediately after `path:.#disko`**:
+
+```sh
+sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- --mode format,mount --flake "path:$PWD#docker"
+```
+
+`sudo` gives Disko permission to access the disk. The standalone `--` passes
+`--mode` and the following arguments to Disko rather than to Nix.
+Verify that the OS filesystem is mounted before continuing:
+
+```sh
+findmnt --mountpoint /mnt
+```
+
+It must show the ext4 root partition on the 32 GiB OS disk. To reuse an existing
+OS filesystem, use the mount-only command in the reinstall section instead.
+
+### 5. Initialize the EMPTY Docker disk once: live ISO
+
+**Run this only for the first installation on an empty `scsi1` disk.** If the
+filesystem was already created during an earlier attempt, skip to step 6.
+Never run initialization as part of an OS reinstall or routine update.
+
+```sh
+sudo bash scripts/initialize-docker-disk.sh
+```
+
+Check the displayed disk identity and type the following only if it is the
+intended empty 200 GiB disk:
+
+```text
+INITIALIZE /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1
+```
+
+The script creates ext4 directly on the whole disk, with label `docker-data`.
+It refuses existing storage. If it refuses, inspect the disk; do not remove
+signatures, add force flags or substitute a raw formatting command.
+
+### 6. Mount Docker storage: live ISO
+
+Use this step for both a newly initialized disk and an existing Docker data disk:
+
+```sh
+sudo udevadm settle
+sudo mkdir -p /mnt/var/lib/docker
+sudo mount /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1 /mnt/var/lib/docker
+findmnt --mountpoint /mnt/var/lib/docker
+```
+
+The last command must show a separate ext4 mount from `scsi1` at exactly
+`/mnt/var/lib/docker`. If mounting fails, stop and inspect the disk. A mount
+failure is not a reason to initialize it again.
+
+### 7. Install NixOS: live ISO
+
+From `~/homelab-nix`, copy the committed configuration onto the mounted OS disk
+and make its bootstrap Git checkout owned by root:
+
+```sh
+sudo mkdir -p /mnt/etc/nixos
+sudo cp -a . /mnt/etc/nixos/
+sudo chown -R root:root /mnt/etc/nixos
+sudo nixos-install --flake /mnt/etc/nixos#docker
+```
+
+Set the root console password when prompted. This is the installed system's
+password, separate from the temporary `nixos` password on the ISO. Installed SSH
+access uses the public key in Git; root password login over SSH is disabled.
+The installer builds and installs this flake's `docker` configuration.
+
+Wait for `nixos-install` to finish successfully, then power off:
+
+```sh
+sudo poweroff
+```
+
+### 8. Boot the installed system and reconnect
+
+In Proxmox, eject the installer ISO, put `scsi0` first in the boot order, keep
+`scsi1` attached, and start the VM. In its console, log in as `root` with the
+password set during installation and check its IP:
+
+```sh
+ip -4 -br addr
+```
+
+On your workstation, connect using your SSH key:
+
+```sh
+ssh root@VM_IP
+```
+
+Replace `VM_IP` with the installed host's address. The installed configuration
+does not create a `nixos` user. If SSH reports a changed host key, see the
+troubleshooting section before replacing the saved ISO key.
+
+### 9. Verify the installed host
+
+Run on the installed host as root:
+
+```sh
+findmnt --mountpoint /var/lib/docker
+systemctl is-active docker
+docker info --format '{{.DockerRootDir}} {{.Driver}} {{.LoggingDriver}}'
+docker compose version
+docker run --rm hello-world
+docker volume ls
+systemctl list-timers nixos-upgrade.timer
+nixos-version --configuration-revision
+```
+
+Expected results:
+
+- `/var/lib/docker` is a separate ext4 mount from `scsi1`.
+- Docker is `active` and reports `/var/lib/docker overlay2 local`.
+- Compose reports its version, and the disposable `hello-world` container succeeds.
+- The GitOps timer has a next run, and the configuration revision identifies
+  the Git commit used for installation.
+
+Named volumes live under `/var/lib/docker/volumes` on the data disk. Bind mounts
+use the host path you specify; paths under `/home` or `/opt` still use the OS disk.
+
+## Installation troubleshooting
+
+| Symptom | Action |
+| --- | --- |
+| Disko reports error 13 or says to run as root | Use the exact step 4 command, including `sudo`. |
+| Nix reports `unrecognised flag '--mode'` | Include the standalone `--` between `path:.#disko` and `--mode`. |
+| Nix says `nix-command` or `flakes` is disabled | Use the explicit `--extra-experimental-features 'nix-command flakes'` flags shown above. |
+| The initializer refuses an existing filesystem or disk signature | Skip initialization if the expected Docker filesystem already exists; inspect it before mounting. Do not force a format. |
+| A mount is already mounted after retrying a step | Check it with the corresponding `findmnt --mountpoint` command and continue only if the source and target are correct. |
+| SSH as `nixos` fails after installation | Connect as `root` using the private key matching the public key in the repository. |
+
+The installed system generates different SSH host keys from the live ISO.
+If the workstation reports a changed key, confirm the VM's address and inspect
+the new fingerprint **from the installed VM's Proxmox console**:
+
+```sh
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+Only after confirming that this is the VM you installed, remove its saved ISO
+key **on your workstation**, reconnect, and compare the presented fingerprint:
+
+```sh
+ssh-keygen -R VM_IP
+ssh root@VM_IP
+```
 
 ## Reinstalling the OS while keeping Docker data
 
 Keep `scsi1` and its backing storage intact. As an extra boundary when replacing
 or repartitioning the OS disk, temporarily detach `scsi1` in the VM settings
 without deleting its storage. Disko targets only the fixed `scsi0` ID.
-Reconnect `scsi1` when OS preparation is complete, mount its existing filesystem
-as shown above, and install NixOS. Never run the Docker initializer for a reinstall.
-Docker reuses the volumes and other data already on `scsi1`.
+Boot the ISO and clone/validate the committed configuration as described above.
+For a new, empty replacement OS disk, use fresh-install step 4. To reuse an
+already prepared OS filesystem, run this **mount-only** command from the repository:
+
+```sh
+sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- --mode mount --flake "path:$PWD#docker"
+```
+
+Reconnect `scsi1` when OS preparation is complete. If reconnecting it requires
+rebooting the ISO, run the mount-only command again afterward to restore `/mnt`.
+Then continue from fresh-install **step 6** to mount its existing filesystem,
+install NixOS and boot the host. **Skip step 5 entirely**: never run the Docker
+initializer for a reinstall. Docker reuses the volumes and other data on `scsi1`.
+This configuration expects ext4 on the whole data disk; an existing disk with a
+different layout needs a matching mount declaration in Git, not reformatting.
 
 ## GitOps updates
 

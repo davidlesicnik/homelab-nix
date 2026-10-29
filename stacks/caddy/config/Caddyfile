@@ -1,0 +1,150 @@
+{
+    acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+}
+
+(cert) {
+    encode zstd gzip
+
+    log {
+        output file {$CADDY_LOG_DIR:/data/logs}/access.log {
+            roll_size 100mb
+            roll_keep 5
+            roll_keep_for 720h
+        }
+        format json
+    }
+}
+
+
+adguard.lesicnik.eu {
+    import cert
+    reverse_proxy 192.168.10.9:3001
+}
+
+beszel.lesicnik.eu {
+    import cert
+    reverse_proxy beszel:8090
+}
+
+books.lesicnik.eu {
+    import cert
+    reverse_proxy litara:3000
+}
+
+dns.lesicnik.eu {
+    import cert
+    @dnsquery path /dns-query*
+    handle @dnsquery {
+        reverse_proxy https://192.168.10.9:3443 {
+            header_up Host {upstream_hostport}
+            transport http {
+                tls_insecure_skip_verify
+            }
+        }
+    }
+    handle {
+        respond 404
+    }
+}
+
+ddns.lesicnik.eu {
+    import cert
+    reverse_proxy ddns-updater:8000
+}
+
+docker.lesicnik.eu {
+    import cert
+    reverse_proxy dockhand:3000
+}
+
+fuel.lesicnik.eu {
+    import cert
+    reverse_proxy lubelogger:8080
+}
+
+git.lesicnik.eu {
+    import cert
+    reverse_proxy forgejo:3000
+}
+
+ha.lesicnik.eu {
+    import cert
+    reverse_proxy 192.168.10.5:8123
+}
+
+obsidian.lesicnik.eu {
+    reverse_proxy couchdb:5984 {
+        header_up Host {host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+phone.lesicnik.eu {
+    import cert
+
+    @pwa_files path /manifest.webmanifest /sw.js /icon-192.png /icon-512.png /apple-touch-icon.png
+    handle @pwa_files {
+        reverse_proxy ha-phone:80
+    }
+
+    handle {
+        forward_auth authelia:9091 {
+            uri /api/authz/forward-auth
+        }
+        reverse_proxy ha-phone:80
+    }
+}
+
+kiosk.lesicnik.eu {
+    import cert
+    reverse_proxy immich-kiosk:3000
+}
+
+login.lesicnik.eu {
+    import cert
+    reverse_proxy authelia:9091
+}
+
+prowlarr.lesicnik.eu {
+    import cert
+    reverse_proxy prowlarr:9696
+}
+
+radarr.lesicnik.eu {
+    import cert
+    reverse_proxy radarr:7878
+}
+
+sonarr.lesicnik.eu {
+    import cert
+    reverse_proxy sonarr:8989
+}
+
+ugi.lesicnik.eu {
+    import cert
+    reverse_proxy https://192.168.10.9:9443 {
+        header_up Host {upstream_hostport}
+        transport http {
+            tls_insecure_skip_verify
+        }
+    }
+}
+
+usenet.lesicnik.eu {
+    import cert
+    reverse_proxy sabnzbd:8080
+}
+
+tablet.lesicnik.eu {
+    import cert
+    reverse_proxy ha-tablet:80
+}
+
+torrent.lesicnik.eu {
+    import cert
+    reverse_proxy qbittorrent:1234
+}
+
+# Additional per-site configuration is included in every GitOps build.
+import sites/*.caddy

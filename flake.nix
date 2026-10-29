@@ -7,6 +7,10 @@
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -14,18 +18,45 @@
       self,
       nixpkgs,
       disko,
+      sops-nix,
       ...
     }:
+    let
+      pkgs = nixpkgs.legacyPackages.x86_64-linux;
+    in
     {
       nixosConfigurations.docker = nixpkgs.lib.nixosSystem {
         modules = [
           disko.nixosModules.disko
+          sops-nix.nixosModules.sops
           ./hosts/docker
           { system.configurationRevision = self.rev or self.dirtyRev or null; }
         ];
       };
 
-      # Use the locked Disko version for the initial installation, too.
-      packages.x86_64-linux.disko = disko.packages.x86_64-linux.disko;
+      packages.x86_64-linux = {
+        # Use the locked Disko version for the initial installation, too.
+        disko = disko.packages.x86_64-linux.disko;
+        caddy-image = pkgs.callPackage ./stacks/caddy/image.nix { };
+      };
+
+      checks.x86_64-linux.caddy-config = pkgs.callPackage ./stacks/caddy/config.nix { };
+
+      devShells =
+        nixpkgs.lib.genAttrs
+          [
+            "aarch64-darwin"
+            "x86_64-darwin"
+            "aarch64-linux"
+            "x86_64-linux"
+          ]
+          (system: {
+            default = nixpkgs.legacyPackages.${system}.mkShellNoCC {
+              packages = with nixpkgs.legacyPackages.${system}; [
+                sops
+                age
+              ];
+            };
+          });
     };
 }

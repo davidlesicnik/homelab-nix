@@ -95,7 +95,18 @@ findmnt --mountpoint /mnt/srv
 
 Confirm a separate ext4 mount from `scsi1`. A mount failure is not a reason to format.
 
-### 6. Install
+### 6. Restore the secrets identity and install
+
+The Caddy credential is encrypted in Git. Restore this host's backed-up age
+identity before installing; this is the only secret that must be provisioned
+separately. See [encrypted secrets](secrets.md) for key generation and recovery.
+
+```sh
+sudo install -D -m 0600 /path/to/backed-up-host-key.txt /mnt/var/lib/sops-nix/key.txt
+```
+
+Use the identity whose public recipient is registered for this host in
+`.sops.yaml`. A newly generated, unregistered key cannot decrypt its secrets.
 
 ```sh
 sudo mkdir -p /mnt/etc/nixos
@@ -140,13 +151,21 @@ Run `podman` and `podman compose` as `containers`. Running them as root uses a
 different, rootful store. Docker API clients can use
 `DOCKER_HOST=unix:///run/user/1000/podman/podman.sock` from this user's session.
 
-The user `podman-restart.service` restores containers with `--restart=always`
-or `--restart=unless-stopped` at boot. Compose files and deployment automation
-remain in their separate repository. For explicit user services, place Quadlets
-under `~/.config/containers/systemd/` with `[Install] WantedBy=default.target`.
+Declarative containers live in [`stacks/<name>/`](stacks/README.md), with each
+stack imported explicitly by its host. NixOS manages their system services as
+the rootless `containers` user, including startup, configuration changes and
+shutdown when the data disk is unavailable. Caddy is the first managed stack;
+see the [stack documentation](stacks/README.md#caddy) for configuration and secrets.
+
+For manually managed containers, the user `podman-restart.service` restores
+containers with `--restart=always` or `--restart=unless-stopped` at boot. Existing
+Compose files may remain in their separate repository. For explicit user
+services, place Quadlets under `~/.config/containers/systemd/` with
+`[Install] WantedBy=default.target`.
 
 Rootless published ports must be `1024` or higher by default (for example,
-`8080:80`). Open any required host firewall ports explicitly in the host config.
+`8080:80`). The Caddy stack lowers this threshold to `80` and opens TCP 80/443
+and UDP 443. Other exposed services must open their host firewall ports explicitly.
 See the [Podman rootless guide](https://github.com/containers/podman/blob/v5.8.9/docs/tutorials/rootless_tutorial.md)
 and [Quadlet documentation](https://docs.podman.io/en/stable/markdown/podman-systemd.unit.5.html).
 

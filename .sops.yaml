@@ -1,0 +1,10 @@
+keys:
+  - &admin_david age1mkhmu3dqd8pptn9a3c5srca2fhwe2lpsh74em96ylgakxg26n5nszsdhu5
+  - &host_docker age17fw2um9cu50snpph0vmjqwg4y4nfsnlkxq0s58ts2z5qa98dx3sq7fjnfa
+
+creation_rules:
+  - path_regex: ^stacks/[^/]+/secrets\.yaml$
+    key_groups:
+      - age:
+          - *admin_david
+          - *host_docker

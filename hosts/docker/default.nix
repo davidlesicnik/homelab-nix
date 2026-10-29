@@ -3,7 +3,9 @@
   imports = [
     ../../modules/nixos/common.nix
     ../../modules/nixos/gitops.nix
-    ../../modules/nixos/podman.nix
+    ../../modules/nixos/secrets.nix
+    ../../modules/nixos/containers.nix
+    ../../stacks/caddy
     ./hardware-configuration.nix
     ./disk-config.nix
   ];

@@ -26,7 +26,7 @@ in
     isNormalUser = true;
     uid = 1000;
     group = "containers";
-    home = "/srv/containers";
+    home = "/srv/podman";
     # Create the home only after the data disk is mounted, never during activation.
     createHome = false;
     linger = true;

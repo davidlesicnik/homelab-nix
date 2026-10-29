@@ -14,8 +14,8 @@ The hostname and flake target remain `docker` so existing GitOps keeps working.
 | Gateway / DNS | `192.168.10.1` / `192.168.10.9` |
 | OS disk | `scsi0`, 32 GiB |
 | Container disk | `scsi1`, 200 GiB, ext4 at `/srv` |
-| Container user | `containers`, UID/GID `1000`, home `/srv/containers` |
-| Rootless storage | `/srv/containers/.local/share/containers/storage` |
+| Container user | `containers`, UID/GID `1000`, home `/srv/podman` |
+| Rootless storage | `/srv/podman/.local/share/containers/storage` |
 | Rootless API socket | `/run/user/1000/podman/podman.sock` |
 
 Reserve `.20` or exclude it from the router's DHCP pool.
@@ -30,7 +30,7 @@ disabled.
 
 The existing `scsi1` filesystem is remounted from `/var/lib/docker` to `/srv`;
 it is **never formatted or recursively chowned**. Its old Docker files stay at the
-root of that filesystem, separate from the new `/srv/containers` home.
+root of that filesystem, separate from the new `/srv/podman` home.
 The mount directory becomes `0710 root:containers` so this user can reach its
 home; existing files and volume ownership stay intact.
 **Do not run the disk initializer during this switch.**
@@ -172,7 +172,7 @@ podman run --rm docker.io/library/alpine:latest id
 ```
 
 Expect UID/GID `1000`,
-`true /srv/containers/.local/share/containers/storage overlay`, and an `active`
+`true /srv/podman/.local/share/containers/storage overlay`, and an `active`
 user socket. The Alpine command should succeed; `uid=0` inside the container maps
 to the unprivileged `containers` user on the host.
 

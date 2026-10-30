@@ -1,12 +1,12 @@
 {
   config,
   lib,
-  pkgs,
+  caddyPkgs,
   ...
 }:
 let
-  image = pkgs.callPackage ./image.nix { };
-  caddyConfig = pkgs.callPackage ./config.nix { };
+  image = caddyPkgs.callPackage ./image.nix { };
+  caddyConfig = caddyPkgs.callPackage ./config.nix { };
 in
 {
   sops.secrets."caddy/cloudflare_api_token" = {

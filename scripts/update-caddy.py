@@ -55,7 +55,7 @@ def main():
             capture=True,
         ).stdout.splitlines()
         version = latest_stable(tags)
-        run(NIX + ["flake", "update", "nixpkgs"])
+        run(NIX + ["flake", "update", "caddy-nixpkgs"])
         source = originals[PACKAGE].decode()
         source = replace_one(
             r"github\.com/caddy-dns/cloudflare@v\d+\.\d+\.\d+",

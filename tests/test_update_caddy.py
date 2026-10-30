@@ -46,6 +46,7 @@ class CaddyUpdates(unittest.TestCase):
                 if args[0] == "gh":
                     return subprocess.CompletedProcess(args, 0, stdout="v0.2.5\n")
                 if "update" in args:
+                    self.assertEqual(args[-1], "caddy-nixpkgs")
                     (root / updater.LOCK).write_text("changed lock")
                     return subprocess.CompletedProcess(args, 0)
                 raise RuntimeError("simulated source evaluation failure")

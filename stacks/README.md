@@ -28,7 +28,7 @@ Review and merge PRs to deploy through GitOps. PostgreSQL stays on major version
 16; a major upgrade requires a separate database migration. Use specific version
 tags for external images so PRs show version changes instead of digest changes.
 Caddy is built locally and retains its dedicated updater below. CI evaluates the
-host on every PR. It builds and validates Caddy only when its files, flake inputs,
+host on every PR. It builds and validates Caddy only when its files, dedicated input,
 updater, or CI workflows change, or when manually dispatched. Application startup
 and database compatibility still need runtime checks.
 
@@ -55,13 +55,14 @@ journalctl -u podman-caddy.service -n 30 --no-pager
 ### Caddy updates
 
 The `Caddy updates` GitHub Actions workflow runs Mondays at 06:17 UTC and can
-also be started manually. It refreshes the locked Nixpkgs revision on the current
+also be started manually. It refreshes the dedicated `caddy-nixpkgs` input on the current
 NixOS branch, selects the latest stable Cloudflare plugin tag, and recalculates
 and verifies the dependency hash. It builds the image and validates the Caddy
 configuration before opening or refreshing one PR on `codex/update-caddy`.
 
-Review and merge that PR to deploy through GitOps. Nixpkgs updates can also
-change other host packages. The managed branch gets explicitly dispatched build
+The binary, image dependencies and configuration validator all use this separate
+pin. Host package updates do not change Caddy. Review and merge that PR to deploy
+through GitOps. The managed branch gets explicitly dispatched build
 checks using GitHub's built-in token; no personal token or SOPS keys are needed.
 Failures leave `main` unchanged and appear as failed workflow runs. The updater
 restores its input files if dependency discovery or hash verification fails.

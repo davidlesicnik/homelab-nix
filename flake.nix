@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    caddy-nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -17,15 +18,18 @@
     {
       self,
       nixpkgs,
+      caddy-nixpkgs,
       disko,
       sops-nix,
       ...
     }:
     let
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
+      caddyPkgs = caddy-nixpkgs.legacyPackages.x86_64-linux;
     in
     {
       nixosConfigurations.docker = nixpkgs.lib.nixosSystem {
+        specialArgs = { inherit caddyPkgs; };
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops
@@ -37,11 +41,11 @@
       packages.x86_64-linux = {
         # Use the locked Disko version for the initial installation, too.
         disko = disko.packages.x86_64-linux.disko;
-        caddy = pkgs.callPackage ./stacks/caddy/package.nix { };
-        caddy-image = pkgs.callPackage ./stacks/caddy/image.nix { };
+        caddy = caddyPkgs.callPackage ./stacks/caddy/package.nix { };
+        caddy-image = caddyPkgs.callPackage ./stacks/caddy/image.nix { };
       };
 
-      checks.x86_64-linux.caddy-config = pkgs.callPackage ./stacks/caddy/config.nix { };
+      checks.x86_64-linux.caddy-config = caddyPkgs.callPackage ./stacks/caddy/config.nix { };
       checks.x86_64-linux.container-images =
         assert import ./tests/container-image.nix;
         pkgs.runCommand "container-images" { } "touch $out";

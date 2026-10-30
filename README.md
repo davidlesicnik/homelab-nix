@@ -109,6 +109,12 @@ skip step 3, then continue at step 4.
 
 ## Updates
 
+Dependabot opens a weekly host-package PR for `nixpkgs`, `disko` and `sops-nix`
+on Mondays at 08:30 Europe/Ljubljana. Nixpkgs tracks `nixos-26.05`; release upgrades
+remain manual. Caddy uses its own `caddy-nixpkgs` pin and a separate weekly updater
+that also refreshes its plugin and dependency hash. Host-only lock updates skip
+Caddy builds. See [container updates](stacks/README.md#container-image-updates).
+
 Commit and push to `main`. To check immediately, run as root:
 
 ```sh
@@ -117,5 +123,7 @@ journalctl -u nixos-upgrade.service -n 30 --no-pager
 ```
 
 Pause with `systemctl stop nixos-upgrade.timer`. Reboots are manual.
-Update dependencies with `nix flake update`; keep `system.stateVersion` and
+To refresh host dependencies manually, use `nix flake update nixpkgs disko sops-nix`.
+Use `python3 scripts/update-caddy.py` on Linux for Caddy, so its hash is refreshed too.
+Keep `system.stateVersion` and
 container UID/GID mappings unchanged. GitOps uses the remote branch, not `/etc/nixos`.

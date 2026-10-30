@@ -1,5 +1,19 @@
 version: 2
 updates:
+  - package-ecosystem: nix
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:30"
+      timezone: Europe/Ljubljana
+    allow:
+      - dependency-name: nixpkgs
+      - dependency-name: disko
+      - dependency-name: sops-nix
+    groups:
+      host-packages:
+        patterns: ["*"]
   - package-ecosystem: docker
     directories:
       - /stacks/**

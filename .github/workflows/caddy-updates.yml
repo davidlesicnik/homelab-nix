@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
-      - name: Refresh Nixpkgs, Cloudflare plugin and dependency hash
+      - name: Refresh Caddy Nixpkgs, Cloudflare plugin and dependency hash
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/update-caddy.py
@@ -51,11 +51,11 @@ jobs:
           git commit -m 'Update Caddy build inputs'
           git push --force-with-lease origin HEAD:refs/heads/codex/update-caddy
           cat > "$RUNNER_TEMP/caddy-pr.md" <<EOF
-          Refresh Nixpkgs on the existing NixOS branch, the latest stable Cloudflare plugin tag, and the verified Caddy dependency hash.
+          Refresh Caddy's dedicated Nixpkgs input, the latest stable Cloudflare plugin tag, and the verified Caddy dependency hash.
 
           Validation: updater tests, full host evaluation, custom Caddy image build, and Caddy configuration validation passed in [the updater run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID).
 
-          Nixpkgs updates may also change other host packages. Merging to main deploys through GitOps. This branch is managed by the Caddy updates workflow.
+          Host Nixpkgs, Disko and sops-nix are updated separately. Merging to main deploys through GitOps. This branch is managed by the Caddy updates workflow.
           EOF
           pr_url=$(gh pr list --head codex/update-caddy --base main --state open --json url --jq '.[0].url // empty')
           if [ -z "$pr_url" ]; then

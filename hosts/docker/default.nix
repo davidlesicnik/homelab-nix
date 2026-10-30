@@ -7,6 +7,7 @@
     ../../modules/nixos/containers.nix
     ../../stacks/caddy
     ../../stacks/ddns-updater
+    ../../stacks/kiosk
     ./hardware-configuration.nix
     ./disk-config.nix
   ];

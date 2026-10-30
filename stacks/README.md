@@ -49,3 +49,18 @@ Timezone `Europe/Ljubljana` and upstream DNS `8.8.8.8` match the Compose stack.
 systemctl status podman-ddns-updater.service
 journalctl -u podman-ddns-updater.service -n 30 --no-pager
 ```
+
+## Immich Kiosk
+
+`kiosk/config.nix` holds the Immich URL, album, display duration, locale and
+screensaver settings. Commit and push changes to `main`; GitOps recreates the
+container with the new settings. The Immich API key is encrypted in
+`kiosk/secrets.yaml`, and credential changes also restart the container.
+
+The image is pinned to `0.45.2`. Volume `kiosk-config` persists `/config`.
+Caddy serves `https://kiosk.lesicnik.eu` through `immich-kiosk:3000` on `proxy`.
+
+```sh
+systemctl status podman-immich-kiosk.service
+journalctl -u podman-immich-kiosk.service -n 30 --no-pager
+```

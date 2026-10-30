@@ -78,8 +78,9 @@ installation; no settings, users, certificates or query history are imported.
 Volumes `adguard-work` and `adguard-conf` persist state on `/srv`.
 
 The rootless container uses host networking to preserve DNS client IPs. The
-unprivileged port threshold is 53; TCP/UDP 53 and TCP 3000/3001 are allowed on
-the LAN interface. AdGuard does not join `proxy` or claim Caddy's ports 80/443.
+unprivileged port threshold is 53; TCP/UDP 53 and setup TCP 3000 are allowed on
+the LAN interface. Admin TCP 3001 is not opened to the LAN; Caddy reaches it
+locally. AdGuard does not join `proxy` or claim Caddy's ports 80/443.
 
 Open `http://192.168.10.20:3000` for first-time setup. Select `192.168.10.20`
 for both listeners, **3001 for the admin interface** and **53 for DNS**;

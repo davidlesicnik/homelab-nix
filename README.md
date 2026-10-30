@@ -15,11 +15,16 @@ Proxmox, x86-64, SeaBIOS.
 | Gateway / DNS | `192.168.10.1` / `192.168.10.9` |
 | OS disk | `scsi0`, 32 GiB |
 | Container disk | `scsi1`, 200 GiB, ext4 at `/srv` |
+| Media mount | `192.168.10.9:/media` (NFS) at `/mnt/media`, mounted on access |
 | Container user | UID/GID `1000`, home `/srv/podman` |
 | Podman socket | `/run/user/1000/podman/podman.sock` |
 
 Reserve `.20` outside DHCP. Run Podman as `containers`; Docker and the rootful
 API are disabled. Container services require `/srv`. Back up important volumes.
+
+The NFS server controls media permissions; allow the container user's UID/GID
+`1000` as needed. After applying the configuration, run `ls /mnt/media` to
+trigger the mount and `findmnt --mountpoint /mnt/media` to verify it.
 
 ## Install
 

@@ -41,6 +41,17 @@
   users.users.containers.openssh.authorizedKeys.keys =
     config.users.users.root.openssh.authorizedKeys.keys;
 
+  fileSystems."/mnt/media" = {
+    device = "192.168.10.9:/media";
+    fsType = "nfs";
+    options = [
+      "_netdev"
+      "nofail"
+      "x-systemd.automount"
+      "x-systemd.mount-timeout=30s"
+    ];
+  };
+
   # Keep this at the release used for the initial installation.
   system.stateVersion = "26.05";
 }

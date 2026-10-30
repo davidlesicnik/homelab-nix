@@ -10,6 +10,7 @@
     ../../stacks/kiosk
     ../../stacks/beszel
     ../../stacks/dockhand
+    ../../stacks/litara
     ./hardware-configuration.nix
     ./disk-config.nix
   ];

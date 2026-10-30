@@ -121,3 +121,26 @@ service definitions, lifecycle and image versions through Nix and GitOps.
 systemctl status podman-dockhand.service
 journalctl -u podman-dockhand.service -n 30 --no-pager
 ```
+
+## Litara
+
+Litara and PostgreSQL 16 are pinned to the exact image digests from the NAS.
+The application joins `proxy` and the private `litara` network; PostgreSQL joins
+only the private network, with no published database port. The original database
+URL, password and JWT secret are encrypted in `litara/secrets.yaml`.
+
+The complete library is at `/srv/litara/books`, mounted at the original `/books`
+path. Volume `litara-postgres-data` holds the restored database, including users,
+settings, metadata, reading progress and history. Caddy serves
+`https://books.lesicnik.eu`; Dockhand displays both containers as Nix-managed.
+
+Startup waits for PostgreSQL readiness. The application also requires
+`/srv/litara/.migration-complete`, created only after the database restore and
+file verification. Preserve that marker with the library when restoring a host;
+do not create it over an empty database or missing library. Migration backups
+are retained under `/srv/litara/migration-20261030` with restricted permissions.
+
+```sh
+systemctl status podman-litara.service podman-litara-postgres.service
+journalctl -u podman-litara.service -n 30 --no-pager
+```

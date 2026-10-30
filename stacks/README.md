@@ -84,3 +84,18 @@ Caddy serves `https://kiosk.lesicnik.eu` through `immich-kiosk:3000` on `proxy`.
 systemctl status podman-immich-kiosk.service
 journalctl -u podman-immich-kiosk.service -n 30 --no-pager
 ```
+
+## Beszel
+
+The hub image is pinned to `0.21.1` in `beszel/default.nix`. Volume `beszel-data`
+persists `/beszel_data`. This migration starts with a fresh database: create an
+account and reconnect agents after switching the Caddy route. Old accounts,
+systems, credentials and history are not imported.
+
+Caddy serves `https://beszel.lesicnik.eu` through `beszel:8090` on `proxy`.
+The public URL and OAuth user-creation setting match the Compose stack.
+
+```sh
+systemctl status podman-beszel.service
+journalctl -u podman-beszel.service -n 30 --no-pager
+```

@@ -8,6 +8,7 @@
     ../../stacks/caddy
     ../../stacks/ddns-updater
     ../../stacks/kiosk
+    ../../stacks/beszel
     ./hardware-configuration.nix
     ./disk-config.nix
   ];

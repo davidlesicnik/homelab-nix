@@ -233,3 +233,18 @@ through `sonarr:8989` and `radarr:7878` on `proxy`.
 systemctl status podman-sonarr.service podman-radarr.service
 journalctl -u podman-sonarr.service -u podman-radarr.service -n 30 --no-pager
 ```
+
+## qBittorrent
+
+The image in `qbittorrent/Dockerfile` is pinned to the migrated `5.1.4` image
+digest. `/srv/qbittorrent/config` preserves settings, torrents and resume state;
+payload files remain on the NAS, with `/mnt/media` mounted at the original
+`/media` path. Rootless UID/GID mapping matches the NAS identity, and startup
+requires the real NFS mount and `/srv/qbittorrent/.migration-complete` marker.
+
+The peer port is TCP/UDP `30054`. The WebUI stays internal on `1234`, served by
+Caddy at `https://torrent.lesicnik.eu`. Keep any router forwarding pointed at
+`192.168.10.20:30054`. Radarr/Sonarr retain the same HTTPS hostname, categories
+and remote path mappings. The copied authentication whitelist additionally
+trusts the new Podman proxy subnet, matching the old proxy's existing access.
+Migration backup and inventory are retained in `/srv/qbittorrent/migration-20261030`.

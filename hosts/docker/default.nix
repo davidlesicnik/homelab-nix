@@ -10,6 +10,7 @@
     ../../stacks/kiosk
     ../../stacks/beszel
     ../../stacks/dockhand
+    ../../stacks/qbittorrent
     ../../stacks/litara
     ../../stacks/sabnzbd
     ../../stacks/prowlarr

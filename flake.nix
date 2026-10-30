@@ -37,6 +37,7 @@
       packages.x86_64-linux = {
         # Use the locked Disko version for the initial installation, too.
         disko = disko.packages.x86_64-linux.disko;
+        caddy = pkgs.callPackage ./stacks/caddy/package.nix { };
         caddy-image = pkgs.callPackage ./stacks/caddy/image.nix { };
       };
 

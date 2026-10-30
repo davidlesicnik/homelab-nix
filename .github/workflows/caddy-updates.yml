@@ -1,0 +1,69 @@
+name: Caddy updates
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: caddy-updates
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - name: Refresh Nixpkgs, Cloudflare plugin and dependency hash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/update-caddy.py
+      - name: Validate proposed update
+        run: |
+          python3 -m unittest discover -s tests -p 'test_*.py'
+          nix flake check --no-build --all-systems
+          nix build --no-link --print-build-logs .#caddy-image .#checks.x86_64-linux.caddy-config
+      - name: Open or refresh the update PR and start its checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if git diff --quiet -- flake.lock stacks/caddy/package.nix; then
+            echo 'Caddy build inputs are already current.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          gh auth setup-git
+          git switch -C codex/update-caddy
+          git add flake.lock stacks/caddy/package.nix
+          git commit -m 'Update Caddy build inputs'
+          git push --force-with-lease origin HEAD:refs/heads/codex/update-caddy
+          cat > "$RUNNER_TEMP/caddy-pr.md" <<EOF
+          Refresh Nixpkgs on the existing NixOS branch, the latest stable Cloudflare plugin tag, and the verified Caddy dependency hash.
+
+          Validation: updater tests, full host evaluation, custom Caddy image build, and Caddy configuration validation passed in [the updater run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID).
+
+          Nixpkgs updates may also change other host packages. Merging to main deploys through GitOps. This branch is managed by the Caddy updates workflow.
+          EOF
+          pr_url=$(gh pr list --head codex/update-caddy --base main --state open --json url --jq '.[0].url // empty')
+          if [ -z "$pr_url" ]; then
+            pr_url=$(gh pr create --base main --head codex/update-caddy --title 'Update Caddy build inputs' --body-file "$RUNNER_TEMP/caddy-pr.md")
+          else
+            gh pr edit "$pr_url" --body-file "$RUNNER_TEMP/caddy-pr.md"
+          fi
+          # Dispatch explicitly so bot-created PRs get checks without a PAT or
+          # waiting for approval of the pull_request event's workflow run.
+          gh workflow run caddy-checks.yml --ref codex/update-caddy
+          echo "Update PR: $pr_url" >> "$GITHUB_STEP_SUMMARY"

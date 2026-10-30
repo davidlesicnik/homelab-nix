@@ -4,3 +4,4 @@
 result
 result-*
 *.agekey
+__pycache__/

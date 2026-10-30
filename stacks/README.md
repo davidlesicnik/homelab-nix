@@ -33,6 +33,24 @@ systemctl status podman-caddy.service
 journalctl -u podman-caddy.service -n 30 --no-pager
 ```
 
+### Caddy updates
+
+The `Caddy updates` GitHub Actions workflow runs Mondays at 06:17 UTC and can
+also be started manually. It refreshes the locked Nixpkgs revision on the current
+NixOS branch, selects the latest stable Cloudflare plugin tag, and recalculates
+and verifies the dependency hash. It builds the image and validates the Caddy
+configuration before opening or refreshing one PR on `codex/update-caddy`.
+
+Review and merge that PR to deploy through GitOps. Nixpkgs updates can also
+change other host packages. The managed branch gets explicitly dispatched build
+checks using GitHub's built-in token; no personal token or SOPS keys are needed.
+Failures leave `main` unchanged and appear as failed workflow runs. The updater
+restores its input files if dependency discovery or hash verification fails.
+
+To refresh inputs locally on Linux, run `python3 scripts/update-caddy.py` with
+Nix and authenticated `gh` available, then build `.#caddy-image` and
+`.#checks.x86_64-linux.caddy-config` before committing the proposed update.
+
 ## DDNS Updater
 
 Edit records in `ddns-updater/config.nix`, then commit and push to `main`.

@@ -183,3 +183,33 @@ container and its original volume remain available for rollback.
 systemctl status podman-prowlarr.service
 journalctl -u podman-prowlarr.service -n 30 --no-pager
 ```
+
+## Sonarr and Radarr
+
+Both images are pinned to the original NAS digests: Sonarr 4.0.20.3014 and
+Radarr 6.4.4.10685. Complete configurations, databases, artwork, credentials,
+profiles, history and backups live in `/srv/sonarr/config` and
+`/srv/radarr/config`. Download clients, indexers and remote path mappings retain
+their existing settings and public URLs.
+
+The NAS media stays on NFS with the original container paths:
+
+| Container | `/data` | `/downloads` |
+| --- | --- | --- |
+| Sonarr | `/mnt/media/tv` | `/mnt/media/download/tv` |
+| Radarr | `/mnt/media/movies` | `/mnt/media/download` |
+
+UID/GID `1000` maps to the NAS identity through Podman's `keep-id` mode. Both
+services require the NFS mount and their own `/srv/<name>/.migration-complete`
+marker. Preserve the marker with a verified restore. Full configuration
+archives, file checksums and database checks are retained in each service's
+`/srv/<name>/migration-20261030` directory with restricted permissions. The old
+NAS containers are stopped, with their original volumes retained for rollback.
+
+Caddy serves `https://sonarr.lesicnik.eu` and `https://radarr.lesicnik.eu`
+through `sonarr:8989` and `radarr:7878` on `proxy`.
+
+```sh
+systemctl status podman-sonarr.service podman-radarr.service
+journalctl -u podman-sonarr.service -u podman-radarr.service -n 30 --no-pager
+```

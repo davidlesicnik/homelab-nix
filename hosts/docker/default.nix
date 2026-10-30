@@ -13,6 +13,8 @@
     ../../stacks/litara
     ../../stacks/sabnzbd
     ../../stacks/prowlarr
+    ../../stacks/sonarr
+    ../../stacks/radarr
     ./hardware-configuration.nix
     ./disk-config.nix
   ];

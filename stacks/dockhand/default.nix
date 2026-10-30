@@ -10,7 +10,7 @@ let
 in
 {
   virtualisation.oci-containers.containers.dockhand = {
-    image = "docker.io/fnsys/dockhand:v1.0.55";
+    imageManifest = ./Dockerfile;
     networks = [ "proxy" ];
     # Container root maps to the unprivileged containers user on the host,
     # giving access to that user's API socket without exposing the rootful API.

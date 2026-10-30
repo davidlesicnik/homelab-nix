@@ -10,14 +10,22 @@ in
   # Extend the native NixOS container options with this host's rootless default.
   options.virtualisation.oci-containers.containers = lib.mkOption {
     type = lib.types.attrsOf (
-      lib.types.submodule {
+      lib.types.submodule ({ config, ... }: {
+        options.imageManifest = lib.mkOption {
+          type = lib.types.nullOr lib.types.path;
+          default = null;
+          description = "Dockerfile containing one FROM image reference, monitored by Dependabot.";
+        };
+        config.image = lib.mkIf (config.imageManifest != null) (
+          import ../../lib/container-image.nix (builtins.readFile config.imageManifest)
+        );
         config.podman.user = lib.mkDefault "containers";
         config.labels = {
           "dockhand.update" = lib.mkDefault "false";
           "dockhand.adopt" = lib.mkDefault "false";
           "dockhand.tags" = lib.mkDefault "NixOS";
         };
-      }
+      })
     );
   };
 
@@ -27,6 +35,14 @@ in
     assertions = lib.mapAttrsToList (name: container: {
       assertion = container.podman.user == "containers";
       message = "Container ${name} must run as the rootless containers user.";
+    }) config.virtualisation.oci-containers.containers
+    ++ lib.mapAttrsToList (name: container: {
+      assertion = container.imageFile != null || (
+        container.imageManifest != null
+        && lib.hasInfix "/stacks/" (toString container.imageManifest)
+        && lib.hasInfix "Dockerfile" (builtins.baseNameOf container.imageManifest)
+      );
+      message = "Container ${name} needs imageManifest pointing to a Dockerfile under stacks/ for Dependabot, or a locally built imageFile.";
     }) config.virtualisation.oci-containers.containers;
 
     # Frontends opt into this shared network with networks = [ "proxy" ].

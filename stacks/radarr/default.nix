@@ -1,7 +1,7 @@
 { lib, pkgs, ... }:
 {
   virtualisation.oci-containers.containers.radarr = {
-    image = "ghcr.io/hotio/radarr:release-6.4.4.10685";
+    imageManifest = ./Dockerfile;
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

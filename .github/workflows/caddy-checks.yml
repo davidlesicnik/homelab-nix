@@ -27,4 +27,5 @@ jobs:
       - name: Evaluate host and build Caddy with configuration validation
         run: |
           nix flake check --no-build --all-systems
+          nix eval --raw .#nixosConfigurations.docker.config.system.build.toplevel.drvPath
           nix build --no-link --print-build-logs .#caddy-image .#checks.x86_64-linux.caddy-config

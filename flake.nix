@@ -42,6 +42,9 @@
       };
 
       checks.x86_64-linux.caddy-config = pkgs.callPackage ./stacks/caddy/config.nix { };
+      checks.x86_64-linux.container-images =
+        assert import ./tests/container-image.nix;
+        pkgs.runCommand "container-images" { } "touch $out";
 
       devShells =
         nixpkgs.lib.genAttrs

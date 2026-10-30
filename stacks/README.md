@@ -4,14 +4,30 @@ Each `stacks/<name>/default.nix` is a NixOS module for one or more containers.
 
 ## Add a stack
 
-1. Define `virtualisation.oci-containers.containers` in its `default.nix`.
-2. Prefix container and volume names with the stack name.
-3. Join frontends to `networks = [ "proxy" ];`; keep databases on private networks.
-4. Import the stack in `hosts/<host>/default.nix`.
-5. Add [encrypted secrets](../secrets.md), then commit and push to `main`.
+1. Add a `Dockerfile` containing one `FROM registry/image:version` line. For
+   additional containers in the same stack, use names such as `postgres.Dockerfile`.
+2. Define `virtualisation.oci-containers.containers` in its `default.nix`, using
+   `imageManifest = ./Dockerfile;` instead of a literal `image`.
+3. Prefix container and volume names with the stack name.
+4. Join frontends to `networks = [ "proxy" ];`; keep databases on private networks.
+5. Import the stack in `hosts/<host>/default.nix`.
+6. Add [encrypted secrets](../secrets.md), then commit and push to `main`.
 
 `modules/nixos/containers.nix` supplies rootless defaults and the shared `proxy`
 network. Images and volumes live on `/srv`; removing a stack preserves its volumes.
+
+## Container image updates
+
+Dependabot checks every `Dockerfile` under `stacks/` on Mondays at 08:00
+Europe/Ljubljana and opens update PRs. New stacks are discovered automatically.
+Nix reads the image directly from the single `FROM` line; these files are image
+declarations and do not introduce another build. Keep them to that one line.
+External containers must use `imageManifest`; host evaluation rejects omissions.
+
+Review and merge PRs to deploy through GitOps. PostgreSQL stays on major version
+16; a major upgrade requires a separate database migration. Caddy is built locally
+and retains its dedicated updater below. CI evaluates the host and validates
+Caddy, but application startup and database compatibility still need runtime checks.
 
 ## Caddy
 
@@ -62,7 +78,7 @@ is passed through a SOPS-rendered `CONFIG` environment variable; the persistent
 `ddns-updater-data` volume holds update history, not the managed configuration.
 The existing Caddy route serves `https://ddns.lesicnik.eu` over `proxy`.
 Timezone `Europe/Ljubljana` and upstream DNS `8.8.8.8` match the Compose stack.
-The image is pinned to `2.10.0`; change its version in `ddns-updater/default.nix`
+The image is pinned to `2.10.0`; change its version in `ddns-updater/Dockerfile`
 and push to `main` to deploy an image update.
 
 ```sh
@@ -87,7 +103,7 @@ journalctl -u podman-immich-kiosk.service -n 30 --no-pager
 
 ## Beszel
 
-The hub image is pinned to `0.21.1` in `beszel/default.nix`. Volume `beszel-data`
+The hub image is pinned to `0.21.1` in `beszel/Dockerfile`. Volume `beszel-data`
 persists `/beszel_data`. This migration starts with a fresh database: create an
 account and reconnect agents after switching the Caddy route. Old accounts,
 systems, credentials and history are not imported.

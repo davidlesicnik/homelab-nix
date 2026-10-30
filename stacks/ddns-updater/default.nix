@@ -21,7 +21,7 @@ in
   };
 
   virtualisation.oci-containers.containers.ddns-updater = {
-    image = "docker.io/qmcgaw/ddns-updater:2.10.0";
+    imageManifest = ./Dockerfile;
     networks = [ "proxy" ];
     labels."dockhand.url" = "https://ddns.lesicnik.eu";
     environment.TZ = "Europe/Ljubljana";

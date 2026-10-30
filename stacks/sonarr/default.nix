@@ -1,7 +1,7 @@
 { lib, pkgs, ... }:
 {
   virtualisation.oci-containers.containers.sonarr = {
-    image = "ghcr.io/hotio/sonarr:release-4.0.20.3014";
+    imageManifest = ./Dockerfile;
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

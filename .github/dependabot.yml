@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: docker
+    directories:
+      - /stacks/**
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Europe/Ljubljana
+    open-pull-requests-limit: 10
+    ignore:
+      # PostgreSQL major upgrades require an explicit database migration.
+      - dependency-name: library/postgres
+        versions: [">=17"]

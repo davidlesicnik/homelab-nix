@@ -1,7 +1,7 @@
 { lib, ... }:
 {
   virtualisation.oci-containers.containers.prowlarr = {
-    image = "ghcr.io/hotio/prowlarr:release-2.6.5.5623";
+    imageManifest = ./Dockerfile;
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

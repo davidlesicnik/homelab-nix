@@ -1,7 +1,7 @@
 { lib, pkgs, ... }:
 {
   virtualisation.oci-containers.containers.sabnzbd = {
-    image = "lscr.io/linuxserver/sabnzbd:5.1.3-ls278";
+    imageManifest = ./Dockerfile;
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

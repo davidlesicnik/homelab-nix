@@ -44,7 +44,7 @@ in
 
   virtualisation.oci-containers.containers = {
     litara = {
-      image = "ghcr.io/litara-app/litara:1.41.1";
+      imageManifest = ./Dockerfile;
       dependsOn = [ "litara-postgres" ];
       networks = [ "proxy" "litara" ];
       environmentFiles = [ config.sops.templates."litara.env".path ];
@@ -52,7 +52,7 @@ in
       labels."dockhand.url" = "https://books.lesicnik.eu";
     };
     litara-postgres = {
-      image = "docker.io/library/postgres:16-alpine@sha256:f4610795587492cd4fb887c2dc3de301b813278bb6f616992061141b5f15ac36";
+      imageManifest = ./postgres.Dockerfile;
       networks = [ "litara" ];
       environment = {
         POSTGRES_USER = "postgres";

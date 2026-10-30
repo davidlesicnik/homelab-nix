@@ -1,7 +1,7 @@
 { lib, ... }:
 {
   virtualisation.oci-containers.containers.beszel = {
-    image = "docker.io/henrygd/beszel:0.21.1";
+    imageManifest = ./Dockerfile;
     networks = [ "proxy" ];
     labels."dockhand.url" = "https://beszel.lesicnik.eu";
     environment = {

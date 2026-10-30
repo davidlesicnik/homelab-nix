@@ -17,6 +17,7 @@
   virtualisation.oci-containers.containers.immich-kiosk = {
     image = "ghcr.io/damongolding/immich-kiosk:0.45.2";
     networks = [ "proxy" ];
+    labels."dockhand.url" = "https://kiosk.lesicnik.eu";
     # Changes to these settings regenerate the service and recreate the container.
     environment = import ./config.nix;
     environmentFiles = [ config.sops.templates."kiosk.env".path ];

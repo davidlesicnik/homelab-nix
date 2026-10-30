@@ -23,6 +23,7 @@ in
   virtualisation.oci-containers.containers.ddns-updater = {
     image = "docker.io/qmcgaw/ddns-updater:2.10.0";
     networks = [ "proxy" ];
+    labels."dockhand.url" = "https://ddns.lesicnik.eu";
     environment.TZ = "Europe/Ljubljana";
     environmentFiles = [ config.sops.templates."ddns-updater.env".path ];
     volumes = [ "ddns-updater-data:/updater/data" ];

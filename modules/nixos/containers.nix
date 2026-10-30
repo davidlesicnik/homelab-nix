@@ -12,6 +12,11 @@ in
     type = lib.types.attrsOf (
       lib.types.submodule {
         config.podman.user = lib.mkDefault "containers";
+        config.labels = {
+          "dockhand.update" = lib.mkDefault "false";
+          "dockhand.adopt" = lib.mkDefault "false";
+          "dockhand.tags" = lib.mkDefault "NixOS";
+        };
       }
     );
   };

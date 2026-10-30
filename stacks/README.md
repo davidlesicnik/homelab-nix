@@ -99,3 +99,25 @@ The public URL and OAuth user-creation setting match the Compose stack.
 systemctl status podman-beszel.service
 journalctl -u podman-beszel.service -n 30 --no-pager
 ```
+
+## Dockhand
+
+The image is pinned to `v1.0.55`. Caddy serves `https://docker.lesicnik.eu`.
+On first installation, the service creates a `NixOS Podman` environment with
+metrics and activity collection enabled. The rootless user's Podman socket is
+mounted at `/var/run/docker.sock`; the rootful API stays disabled.
+
+Volume `dockhand-data` persists its database and preferences on the data disk.
+The socket starts before Dockhand, and the initial environment setup runs only
+once, preserving later authentication and UI changes. Enable authentication
+under Settings.
+
+Use Dockhand as an overview of Nix-controlled containers: status, resource use,
+logs, inspection, images, volumes and networks. Nix-managed containers carry
+`NixOS` tags and labels disabling Dockhand updates and stack adoption. Manage
+service definitions, lifecycle and image versions through Nix and GitOps.
+
+```sh
+systemctl status podman-dockhand.service
+journalctl -u podman-dockhand.service -n 30 --no-pager
+```

@@ -9,6 +9,7 @@
     ../../stacks/ddns-updater
     ../../stacks/kiosk
     ../../stacks/beszel
+    ../../stacks/dockhand
     ./hardware-configuration.nix
     ./disk-config.nix
   ];

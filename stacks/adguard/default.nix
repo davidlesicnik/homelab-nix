@@ -16,8 +16,8 @@
   # Host networking still runs as the unprivileged containers user.
   boot.kernel.sysctl."net.ipv4.ip_unprivileged_port_start" = 53;
   networking.firewall.interfaces.ens18 = {
-    # 3000 is the initial setup wizard; Caddy reaches 3001 locally.
-    allowedTCPPorts = [ 53 3000 ];
+    # Setup is complete; Caddy reaches admin port 3001 locally.
+    allowedTCPPorts = [ 53 ];
     allowedUDPPorts = [ 53 ];
   };
 }

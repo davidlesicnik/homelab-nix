@@ -44,6 +44,8 @@ is passed through a SOPS-rendered `CONFIG` environment variable; the persistent
 `ddns-updater-data` volume holds update history, not the managed configuration.
 The existing Caddy route serves `https://ddns.lesicnik.eu` over `proxy`.
 Timezone `Europe/Ljubljana` and upstream DNS `8.8.8.8` match the Compose stack.
+The image is pinned to `2.10.0`; change its version in `ddns-updater/default.nix`
+and push to `main` to deploy an image update.
 
 ```sh
 systemctl status podman-ddns-updater.service

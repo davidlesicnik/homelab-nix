@@ -21,7 +21,7 @@ in
   };
 
   virtualisation.oci-containers.containers.ddns-updater = {
-    image = "docker.io/qmcgaw/ddns-updater:latest";
+    image = "docker.io/qmcgaw/ddns-updater:2.10.0";
     networks = [ "proxy" ];
     environment.TZ = "Europe/Ljubljana";
     environmentFiles = [ config.sops.templates."ddns-updater.env".path ];

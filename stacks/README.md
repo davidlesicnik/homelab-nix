@@ -164,3 +164,22 @@ retained for rollback. Sonarr and Radarr settings remain unchanged.
 systemctl status podman-sabnzbd.service
 journalctl -u podman-sabnzbd.service -n 30 --no-pager
 ```
+
+## Prowlarr
+
+The image is pinned to the original NAS digest (Prowlarr 2.6.5.5623). The complete
+configuration is at `/srv/prowlarr/config`, including the database, indexers,
+application connections, credentials, history, logs and backups. The existing
+Sonarr and Radarr application URLs remain unchanged.
+
+Caddy serves `https://prowlarr.lesicnik.eu` through `prowlarr:9696` on `proxy`.
+Startup requires `/srv/prowlarr/.migration-complete`, created after file and
+database verification. Preserve that marker with a verified restore. The full
+configuration archive, checksum manifests and database checks are retained in
+`/srv/prowlarr/migration-20261030` with restricted permissions. The stopped NAS
+container and its original volume remain available for rollback.
+
+```sh
+systemctl status podman-prowlarr.service
+journalctl -u podman-prowlarr.service -n 30 --no-pager
+```

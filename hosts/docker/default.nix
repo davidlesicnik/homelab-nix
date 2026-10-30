@@ -6,6 +6,7 @@
     ../../modules/nixos/secrets.nix
     ../../modules/nixos/containers.nix
     ../../stacks/caddy
+    ../../stacks/ddns-updater
     ./hardware-configuration.nix
     ./disk-config.nix
   ];

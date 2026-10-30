@@ -32,3 +32,20 @@ Manage as root; run Podman commands as `containers`:
 systemctl status podman-caddy.service
 journalctl -u podman-caddy.service -n 30 --no-pager
 ```
+
+## DDNS Updater
+
+Edit records in `ddns-updater/config.nix`, then commit and push to `main`.
+GitOps generates fresh configuration and recreates `ddns-updater` whenever an
+entry is added, removed, or changed. Credential changes also restart it.
+
+The Cloudflare token is encrypted in `ddns-updater/secrets.yaml`. Configuration
+is passed through a SOPS-rendered `CONFIG` environment variable; the persistent
+`ddns-updater-data` volume holds update history, not the managed configuration.
+The existing Caddy route serves `https://ddns.lesicnik.eu` over `proxy`.
+Timezone `Europe/Ljubljana` and upstream DNS `8.8.8.8` match the Compose stack.
+
+```sh
+systemctl status podman-ddns-updater.service
+journalctl -u podman-ddns-updater.service -n 30 --no-pager
+```

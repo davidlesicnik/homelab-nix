@@ -7,6 +7,7 @@
     ../../modules/nixos/containers.nix
     ../../stacks/caddy
     ../../stacks/adguard
+    ../../stacks/ha-tablet
     ../../stacks/ddns-updater
     ../../stacks/kiosk
     ../../stacks/beszel

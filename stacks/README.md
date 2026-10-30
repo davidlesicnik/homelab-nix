@@ -71,6 +71,28 @@ To refresh inputs locally on Linux, run `python3 scripts/update-caddy.py` with
 Nix and authenticated `gh` available, then build `.#caddy-image` and
 `.#checks.x86_64-linux.caddy-config` before committing the proposed update.
 
+## HA Tablet
+
+Caddy serves `https://tablet.lesicnik.eu` through `ha-tablet:80` on `proxy`.
+The existing runtime `config.json`, including its Home Assistant connection,
+is preserved in `ha-tablet/secrets.yaml` and mounted read-only. Secret changes
+restart the service; application state does not require a persistent volume.
+
+Forgejo CI in the sister `ha-tablet` repository builds every push to `main`,
+publishes the image, then commits its exact commit tag and digest to
+`ha-tablet/Dockerfile` here. A repository-scoped GitHub deployment key is stored
+in Forgejo's `HOMELAB_NIX_DEPLOY_KEY` secret. Superseded builds are skipped and
+concurrent Git updates are retried. GitOps applies the new pin automatically;
+Dependabot ignores this image. To roll back, restore a previous `FROM` line.
+
+The NAS Caddy forwards this hostname to the new Caddy. The old container and
+runtime configuration remain available for rollback.
+
+```sh
+systemctl status podman-ha-tablet.service
+journalctl -u podman-ha-tablet.service -n 30 --no-pager
+```
+
 ## AdGuard Home
 
 The image is pinned to `v0.107.79` in `adguard/Dockerfile`. This is a fresh

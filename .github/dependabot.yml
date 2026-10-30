@@ -24,6 +24,8 @@ updates:
       timezone: Europe/Ljubljana
     open-pull-requests-limit: 10
     ignore:
+      # The HA Tablet build pipeline owns this image pin.
+      - dependency-name: git.lesicnik.eu/david/ha-tablet
       # PostgreSQL major upgrades require an explicit database migration.
       - dependency-name: library/postgres
         versions: [">=17"]

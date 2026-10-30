@@ -1,0 +1,1 @@
+FROM git.lesicnik.eu/david/ha-tablet:2663b62efaa4cf7f487aa29ad6a40eb4dad9cf2d@sha256:a11c57b99ee20243ceba87623d87d669f14356470c659b3379247ca869dc15ed

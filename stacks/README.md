@@ -144,3 +144,23 @@ are retained under `/srv/litara/migration-20261030` with restricted permissions.
 systemctl status podman-litara.service podman-litara-postgres.service
 journalctl -u podman-litara.service -n 30 --no-pager
 ```
+
+## SABnzbd
+
+The image is pinned to the original NAS digest (SABnzbd 5.1.3). The complete
+configuration, API keys, history and queue state live at `/srv/sabnzbd/config`.
+The NAS media share remains at `/mnt/media`, mounted at the original `/media`
+container path, preserving incomplete downloads, completed files and categories.
+UID/GID `1000` maps directly to the NAS identity through Podman's `keep-id` mode.
+
+Caddy serves `https://usenet.lesicnik.eu` through `sabnzbd:8080` on `proxy`.
+Startup requires the NFS mount and `/srv/sabnzbd/.migration-complete`; preserve
+that marker with a verified configuration restore. A complete configuration
+archive and checksum manifests are retained in `/srv/sabnzbd/migration-20261030`
+with restricted permissions. The stopped NAS container and original volume are
+retained for rollback. Sonarr and Radarr settings remain unchanged.
+
+```sh
+systemctl status podman-sabnzbd.service
+journalctl -u podman-sabnzbd.service -n 30 --no-pager
+```

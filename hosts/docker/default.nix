@@ -11,6 +11,7 @@
     ../../stacks/beszel
     ../../stacks/dockhand
     ../../stacks/litara
+    ../../stacks/sabnzbd
     ./hardware-configuration.nix
     ./disk-config.nix
   ];

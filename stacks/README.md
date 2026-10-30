@@ -82,10 +82,10 @@ unprivileged port threshold is 53; TCP/UDP 53 and setup TCP 3000 are allowed on
 the LAN interface. Admin TCP 3001 is not opened to the LAN; Caddy reaches it
 locally. AdGuard does not join `proxy` or claim Caddy's ports 80/443.
 
-Open `http://192.168.10.20:3000` for first-time setup. Select `192.168.10.20`
-for both listeners, **3001 for the admin interface** and **53 for DNS**;
+Open `http://192.168.10.20:3000` for first-time setup. Select **All interfaces,
+port 3001 for the admin interface**, and **192.168.10.20, port 53 for DNS**;
 port 80 is already occupied by Caddy. Create your account in the wizard.
-Caddy serves `https://adguard.lesicnik.eu` through `192.168.10.20:3001`
+Caddy serves `https://adguard.lesicnik.eu` through `host.containers.internal:3001`
 after setup. Configure upstream resolvers explicitly rather than using the
 host resolver, which still points to the old DNS server.
 

@@ -15,7 +15,7 @@ Proxmox, x86-64, SeaBIOS.
 | Gateway / DNS | `192.168.10.1` / `192.168.10.9` |
 | OS disk | `scsi0`, 32 GiB |
 | Container disk | `scsi1`, 200 GiB, ext4 at `/srv` |
-| Media mount | `192.168.10.9:/media` (NFS) at `/mnt/media`, mounted on access |
+| Media mount | `192.168.10.9:/volume1/media` (NFS) at `/mnt/media`, mounted on access |
 | Container user | UID/GID `1000`, home `/srv/podman` |
 | Podman socket | `/run/user/1000/podman/podman.sock` |
 

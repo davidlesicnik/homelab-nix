@@ -42,7 +42,7 @@
     config.users.users.root.openssh.authorizedKeys.keys;
 
   fileSystems."/mnt/media" = {
-    device = "192.168.10.9:/media";
+    device = "192.168.10.9:/volume1/media";
     fsType = "nfs";
     options = [
       "_netdev"

@@ -1,8 +1,7 @@
 { lib, pkgs, ... }:
 {
   virtualisation.oci-containers.containers.sonarr = {
-    # Preserve the exact NAS image while moving the existing database.
-    image = "ghcr.io/hotio/sonarr@sha256:1cf15fb504603e6784aa3be275019bbef9c46a4e4f3e575fe28d56ff30590823";
+    image = "ghcr.io/hotio/sonarr:release-4.0.20.3014";
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

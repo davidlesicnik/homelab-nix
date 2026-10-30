@@ -124,7 +124,7 @@ journalctl -u podman-dockhand.service -n 30 --no-pager
 
 ## Litara
 
-Litara and PostgreSQL 16 are pinned to the exact image digests from the NAS.
+Litara uses image tag `1.41.1`; PostgreSQL 16 retains its original NAS digest.
 The application joins `proxy` and the private `litara` network; PostgreSQL joins
 only the private network, with no published database port. The original database
 URL, password and JWT secret are encrypted in `litara/secrets.yaml`.
@@ -147,7 +147,7 @@ journalctl -u podman-litara.service -n 30 --no-pager
 
 ## SABnzbd
 
-The image is pinned to the original NAS digest (SABnzbd 5.1.3). The complete
+The image uses tag `5.1.3-ls278`. The complete
 configuration, API keys, history and queue state live at `/srv/sabnzbd/config`.
 The NAS media share remains at `/mnt/media`, mounted at the original `/media`
 container path, preserving incomplete downloads, completed files and categories.
@@ -167,7 +167,7 @@ journalctl -u podman-sabnzbd.service -n 30 --no-pager
 
 ## Prowlarr
 
-The image is pinned to the original NAS digest (Prowlarr 2.6.5.5623). The complete
+The image uses tag `release-2.6.5.5623`. The complete
 configuration is at `/srv/prowlarr/config`, including the database, indexers,
 application connections, credentials, history, logs and backups. The existing
 Sonarr and Radarr application URLs remain unchanged.
@@ -186,8 +186,8 @@ journalctl -u podman-prowlarr.service -n 30 --no-pager
 
 ## Sonarr and Radarr
 
-Both images are pinned to the original NAS digests: Sonarr 4.0.20.3014 and
-Radarr 6.4.4.10685. Complete configurations, databases, artwork, credentials,
+The image tags are `release-4.0.20.3014` for Sonarr and
+`release-6.4.4.10685` for Radarr. Complete configurations, databases, artwork, credentials,
 profiles, history and backups live in `/srv/sonarr/config` and
 `/srv/radarr/config`. Download clients, indexers and remote path mappings retain
 their existing settings and public URLs.

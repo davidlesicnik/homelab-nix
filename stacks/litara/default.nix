@@ -44,8 +44,7 @@ in
 
   virtualisation.oci-containers.containers = {
     litara = {
-      # Preserve the exact running NAS image for this data migration.
-      image = "ghcr.io/litara-app/litara@sha256:d42ab3bf0c6cefaa05990f1dab9d0093a5bff41e5e1c2b9d1e3e15a9fa9a05a5";
+      image = "ghcr.io/litara-app/litara:1.41.1";
       dependsOn = [ "litara-postgres" ];
       networks = [ "proxy" "litara" ];
       environmentFiles = [ config.sops.templates."litara.env".path ];

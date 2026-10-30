@@ -1,8 +1,7 @@
 { lib, pkgs, ... }:
 {
   virtualisation.oci-containers.containers.radarr = {
-    # Preserve the exact NAS image while moving the existing database.
-    image = "ghcr.io/hotio/radarr@sha256:571098eb98381660a1ce48500187a660d67ca1362fb8e6b5903f2d0e4ddde620";
+    image = "ghcr.io/hotio/radarr:release-6.4.4.10685";
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

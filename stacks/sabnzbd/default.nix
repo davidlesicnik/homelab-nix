@@ -1,8 +1,7 @@
 { lib, pkgs, ... }:
 {
   virtualisation.oci-containers.containers.sabnzbd = {
-    # Keep the exact NAS image while moving the existing configuration and data.
-    image = "lscr.io/linuxserver/sabnzbd@sha256:3ac1c9ea03bafa2588dd8acdcb809857bae305e71d2d90e11d689c78076a9c01";
+    image = "lscr.io/linuxserver/sabnzbd:5.1.3-ls278";
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

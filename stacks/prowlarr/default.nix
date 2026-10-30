@@ -1,8 +1,7 @@
 { lib, ... }:
 {
   virtualisation.oci-containers.containers.prowlarr = {
-    # Preserve the exact running NAS image during the data migration.
-    image = "ghcr.io/hotio/prowlarr@sha256:8c5ebfedf7ba82af100914993ba1f2942b1809ab1d18b85e4833362a292c7c5e";
+    image = "ghcr.io/hotio/prowlarr:release-2.6.5.5623";
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

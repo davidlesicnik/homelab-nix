@@ -35,7 +35,9 @@ in
       ${pkgs.systemd}/bin/systemctl --user start podman.socket
     '';
     postStart = ''
-      ${config.virtualisation.podman.package}/bin/podman exec dockhand node /run/dockhand-bootstrap.mjs
+      # Execute through the user's API service so crun joins the delegated user
+      # cgroup; direct exec from this system service cannot enter that cgroup.
+      ${config.virtualisation.podman.package}/bin/podman --remote --url unix://${socket} exec dockhand node /run/dockhand-bootstrap.mjs
     '';
     serviceConfig.Restart = lib.mkForce "always";
   };

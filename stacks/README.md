@@ -25,9 +25,12 @@ declarations and do not introduce another build. Keep them to that one line.
 External containers must use `imageManifest`; host evaluation rejects omissions.
 
 Review and merge PRs to deploy through GitOps. PostgreSQL stays on major version
-16; a major upgrade requires a separate database migration. Caddy is built locally
-and retains its dedicated updater below. CI evaluates the host and validates
-Caddy, but application startup and database compatibility still need runtime checks.
+16; a major upgrade requires a separate database migration. Use specific version
+tags for external images so PRs show version changes instead of digest changes.
+Caddy is built locally and retains its dedicated updater below. CI evaluates the
+host on every PR. It builds and validates Caddy only when its files, flake inputs,
+updater, or CI workflows change, or when manually dispatched. Application startup
+and database compatibility still need runtime checks.
 
 ## Caddy
 
@@ -140,7 +143,7 @@ journalctl -u podman-dockhand.service -n 30 --no-pager
 
 ## Litara
 
-Litara uses image tag `1.41.1`; PostgreSQL 16 retains its original NAS digest.
+Litara uses image tag `1.41.1`; PostgreSQL uses `16.15-alpine`.
 The application joins `proxy` and the private `litara` network; PostgreSQL joins
 only the private network, with no published database port. The original database
 URL, password and JWT secret are encrypted in `litara/secrets.yaml`.

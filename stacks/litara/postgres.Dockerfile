@@ -1,1 +1,1 @@
-FROM docker.io/library/postgres:16-alpine@sha256:f4610795587492cd4fb887c2dc3de301b813278bb6f616992061141b5f15ac36
+FROM docker.io/library/postgres:16.15-alpine

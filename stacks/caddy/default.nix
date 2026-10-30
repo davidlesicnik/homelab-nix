@@ -49,7 +49,7 @@ in
   };
 
   # Permit the rootless port forwarder to bind Caddy's standard HTTP(S) ports.
-  boot.kernel.sysctl."net.ipv4.ip_unprivileged_port_start" = 80;
+  boot.kernel.sysctl."net.ipv4.ip_unprivileged_port_start" = lib.mkDefault 80;
   networking.firewall = {
     allowedTCPPorts = [
       80

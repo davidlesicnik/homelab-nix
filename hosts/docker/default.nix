@@ -6,6 +6,7 @@
     ../../modules/nixos/secrets.nix
     ../../modules/nixos/containers.nix
     ../../stacks/caddy
+    ../../stacks/adguard
     ../../stacks/ddns-updater
     ../../stacks/kiosk
     ../../stacks/beszel

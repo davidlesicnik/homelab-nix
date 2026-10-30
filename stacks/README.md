@@ -42,7 +42,7 @@ and database compatibility still need runtime checks.
 
 GitOps validates configuration and restarts Caddy for config or credential changes.
 Volumes `caddy-data` and `caddy-config` persist certificates, logs and state.
-Ports: TCP 80/443, UDP 443; rootless port threshold: 80.
+Ports: TCP 80/443, UDP 443; rootless port threshold: 53 with AdGuard enabled.
 Existing container-name upstreams become reachable as their stacks migrate to `proxy`.
 
 Manage as root; run Podman commands as `containers`:
@@ -70,6 +70,33 @@ restores its input files if dependency discovery or hash verification fails.
 To refresh inputs locally on Linux, run `python3 scripts/update-caddy.py` with
 Nix and authenticated `gh` available, then build `.#caddy-image` and
 `.#checks.x86_64-linux.caddy-config` before committing the proposed update.
+
+## AdGuard Home
+
+The image is pinned to `v0.107.79` in `adguard/Dockerfile`. This is a fresh
+installation; no settings, users, certificates or query history are imported.
+Volumes `adguard-work` and `adguard-conf` persist state on `/srv`.
+
+The rootless container uses host networking to preserve DNS client IPs. The
+unprivileged port threshold is 53; TCP/UDP 53 and TCP 3000/3001 are allowed on
+the LAN interface. AdGuard does not join `proxy` or claim Caddy's ports 80/443.
+
+Open `http://192.168.10.20:3000` for first-time setup. Select `192.168.10.20`
+for both listeners, **3001 for the admin interface** and **53 for DNS**;
+port 80 is already occupied by Caddy. Create your account in the wizard.
+Caddy serves `https://adguard.lesicnik.eu` through `192.168.10.20:3001`
+after setup. Configure upstream resolvers explicitly rather than using the
+host resolver, which still points to the old DNS server.
+
+The old DNS service, router/DHCP settings, host nameserver and
+`dns.lesicnik.eu` DoH route remain unchanged. Verify DNS over TCP and UDP on
+`.20` before switching clients. Encrypted DNS requires separate configuration;
+no unused encrypted-DNS or DHCP ports are opened for this bare service.
+
+```sh
+systemctl status podman-adguardhome.service
+journalctl -u podman-adguardhome.service -n 30 --no-pager
+```
 
 ## DDNS Updater
 

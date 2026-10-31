@@ -8,6 +8,7 @@
     ../../modules/nixos/containers.nix
     ../../stacks/caddy
     ../../stacks/adguard
+    ../../stacks/authelia
     ../../stacks/ha-tablet
     ../../stacks/ddns-updater
     ../../stacks/kiosk

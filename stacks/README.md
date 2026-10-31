@@ -93,6 +93,35 @@ systemctl status podman-ha-tablet.service
 journalctl -u podman-ha-tablet.service -n 30 --no-pager
 ```
 
+## Authelia
+
+`authelia/config.nix` is the source of truth for settings, access rules and OIDC
+clients. Edit it, commit and push to `main`; GitOps renders the configuration
+and recreates Authelia. The runtime configuration is read-only. Credentials,
+signing/encryption keys and the user database are in `authelia/secrets.yaml`.
+Edit them with SOPS; keys ending in `_json` contain a JSON-encoded value
+(including string quotes), preserving multiline keys and special characters.
+The user database is ordinary YAML stored as one encrypted string.
+
+The image is pinned to the migrated `4.39.16` digest. `/srv/authelia/data`
+preserves the complete SQLite identity store, MFA registrations, OIDC grants,
+consents and notifier files. Startup requires `/srv/authelia/.migration-complete`;
+restore that marker only with verified data. Backups and verification evidence
+are retained under `/srv/authelia/migration-20261031` with restricted permissions.
+The original NAS container and data remain available for rollback.
+
+Caddy serves `https://login.lesicnik.eu` through `authelia:9091` on `proxy`.
+The NAS Caddy forwards the login portal and HA Phone's authorization requests
+to the new host. Existing OIDC issuer, clients, keys and callbacks are preserved.
+Sessions use the original in-memory provider, so migration or restart requires
+signing in again. Password changes must be applied to the encrypted user
+database through GitOps, matching the original read-only user file.
+
+```sh
+systemctl status podman-authelia.service
+journalctl -u podman-authelia.service -n 30 --no-pager
+```
+
 ## AdGuard Home
 
 The image is pinned to `v0.107.79` in `adguard/Dockerfile`. This is a fresh

@@ -9,6 +9,7 @@
     ../../stacks/caddy
     ../../stacks/adguard
     ../../stacks/authelia
+    ../../stacks/ha-phone
     ../../stacks/ha-tablet
     ../../stacks/ddns-updater
     ../../stacks/kiosk

@@ -71,6 +71,29 @@ To refresh inputs locally on Linux, run `python3 scripts/update-caddy.py` with
 Nix and authenticated `gh` available, then build `.#caddy-image` and
 `.#checks.x86_64-linux.caddy-config` before committing the proposed update.
 
+## HA Phone
+
+Caddy serves `https://phone.lesicnik.eu` through `ha-phone:80` on `proxy`.
+Authelia protects the dashboard, assets and runtime configuration. PWA metadata,
+icons and `sw.js` remain public so installed apps retain their original behavior.
+The hostname and Home Assistant connection are preserved. Browser-local state
+stays on existing devices; no server-side data volume is required.
+
+The live NAS `config.json` is preserved in `ha-phone/secrets.yaml` and mounted
+read-only. Changes restart the service. Forgejo CI in the sister `ha-phone`
+repository publishes each successful `main` build and commits its exact commit
+and digest pin here using a repository-scoped deployment key. Superseded builds
+are skipped and concurrent Git updates retried. Dependabot ignores this image.
+Roll back by restoring a previous `ha-phone/Dockerfile` pin.
+
+The NAS Caddy forwards the hostname to the new Caddy. Its previous configuration
+and the stopped original container remain available for rollback.
+
+```sh
+systemctl status podman-ha-phone.service
+journalctl -u podman-ha-phone.service -n 30 --no-pager
+```
+
 ## HA Tablet
 
 Caddy serves `https://tablet.lesicnik.eu` through `ha-tablet:80` on `proxy`.

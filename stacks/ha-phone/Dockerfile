@@ -1,0 +1,1 @@
+FROM git.lesicnik.eu/david/ha-phone@sha256:5fc81866fcbfbfc90c17212f0d08bf4e70768dae5e6dac833bef7879226a4cf4

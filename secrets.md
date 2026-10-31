@@ -1,6 +1,7 @@
 # Secrets
 
-SOPS + age. Encrypted credentials live in `stacks/<name>/secrets.yaml`;
+SOPS + age. Encrypted credentials live in `stacks/<name>/secrets.yaml` or
+`hosts/<host>/secrets.yaml`;
 public recipients live in `.sops.yaml`.
 
 ## Edit
@@ -19,6 +20,11 @@ For another stack, use the same command with its path and follow Caddy's
 - Workstation: `~/Library/Application Support/sops/age/keys.txt`.
 - Linux: `~/.config/sops/age/keys.txt`.
 - Override: `SOPS_AGE_KEY_FILE`.
+
+Both NixOS hosts have separate age identities. The Plex host's identity is also
+backed up on this Mac at `~/.config/homelab-nix/plex-sops/keys.txt`; preserve it
+when reinstalling or moving administration to another machine. New Plex LXCs
+need their own provisioned identity before enabling encrypted host secrets.
 
 Back up private keys outside Git. Restore the host key when reinstalling;
 see [installation](README.md#install). The workstation key can recover credentials

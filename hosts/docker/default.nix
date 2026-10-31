@@ -4,6 +4,7 @@
     ../../modules/nixos/common.nix
     ../../modules/nixos/gitops.nix
     ../../modules/nixos/secrets.nix
+    ../../modules/nixos/beszel-agent.nix
     ../../modules/nixos/containers.nix
     ../../stacks/caddy
     ../../stacks/adguard
@@ -21,6 +22,8 @@
     ./hardware-configuration.nix
     ./disk-config.nix
   ];
+
+  sops.secrets."beszel-agent/token".sopsFile = ./secrets.yaml;
 
   networking = {
     hostName = "docker";

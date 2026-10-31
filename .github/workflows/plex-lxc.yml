@@ -6,6 +6,8 @@ on:
     paths:
       - 'hosts/plex/**'
       - 'modules/nixos/common.nix'
+      - 'modules/nixos/beszel-agent*.nix'
+      - 'modules/nixos/secrets.nix'
       - 'scripts/update-plex-lxc.py'
       - 'tests/test_plex_update.py'
       - 'flake.nix'

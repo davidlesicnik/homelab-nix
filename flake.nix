@@ -40,6 +40,7 @@
 
       nixosConfigurations.plex = nixpkgs.lib.nixosSystem {
         modules = [
+          sops-nix.nixosModules.sops
           ./hosts/plex
           { system.configurationRevision = self.rev or self.dirtyRev or null; }
         ];

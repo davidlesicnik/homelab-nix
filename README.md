@@ -7,6 +7,18 @@ NixOS homelab configs. Hosts apply updates from `main` through GitOps.
 [Plex Proxmox LXC template](hosts/plex/README.md) — Intel transcoding, NAS media,
 and migration notes for the existing Docker Plex server.
 
+## Monitoring
+
+Both hosts run a native `beszel-agent` service, connecting outward to
+`https://beszel.lesicnik.eu` over HTTPS; no agent port is opened. The `docker`
+agent runs as `containers` to monitor rootless Podman and includes `/srv` usage.
+The `plex` agent monitors the LXC. Registration tokens are SOPS-encrypted in
+`hosts/<host>/secrets.yaml`. The agent version and release checksum are pinned in
+`modules/nixos/beszel-agent-package.nix`; update them alongside the Beszel hub.
+
+Check with `systemctl status beszel-agent` and
+`journalctl -u beszel-agent -n 30 --no-pager` on either host.
+
 ## Host: `docker`
 
 Proxmox, x86-64, SeaBIOS.

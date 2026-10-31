@@ -3,8 +3,12 @@
   imports = [
     "${modulesPath}/virtualisation/proxmox-lxc.nix"
     ../../modules/nixos/common.nix
+    ../../modules/nixos/secrets.nix
+    ../../modules/nixos/beszel-agent.nix
     ./updates.nix
   ];
+
+  sops.secrets."beszel-agent/token".sopsFile = ./secrets.yaml;
 
   environment.etc."plex-build-revision".text =
     if config.system.configurationRevision == null then "unpublished\n"

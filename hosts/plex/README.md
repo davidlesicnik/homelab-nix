@@ -7,6 +7,11 @@ SSH uses the same public key as the `docker` host. GitHub Actions builds system
 updates; the LXC checks for signed builds every two minutes and installs them
 without building packages locally or rebooting automatically.
 
+The native Beszel agent reports LXC metrics to the existing hub over HTTPS.
+Its token is encrypted in `secrets.yaml`. Before applying this configuration to
+a new guest, provision its SOPS identity at `/var/lib/sops-nix/key.txt` (mode
+`0600`) and update the recipient and encrypted file; see [secrets](../../secrets.md).
+
 ## Build
 
 On an x86-64 Linux machine with Nix, from the repo root:

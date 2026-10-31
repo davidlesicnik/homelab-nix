@@ -46,6 +46,8 @@
 
   systemd.tmpfiles.rules = [
     "d /mnt/media 0755 root root -"
+    # Preserve the transcoder path stored in the existing Docker preferences.
+    "d /transcode 0750 plex plex -"
     # The existing Docker Plex library uses /media, so preserve that path.
     "L /media - - - - /mnt/media"
   ];

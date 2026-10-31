@@ -83,6 +83,13 @@ obsidian.lesicnik.eu {
 phone.lesicnik.eu {
     import cert
 
+    # The NAS Caddy sends HA Phone authorization checks through this vhost.
+    # Keeping the original host preserves Authelia's target and return URL.
+    @authelia_authz path /api/authz/forward-auth
+    handle @authelia_authz {
+        reverse_proxy authelia:9091
+    }
+
     @pwa_files path /manifest.webmanifest /sw.js /icon-192.png /icon-512.png /apple-touch-icon.png
     handle @pwa_files {
         reverse_proxy ha-phone:80

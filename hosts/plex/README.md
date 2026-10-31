@@ -30,13 +30,21 @@ instead and adjust the commands below. Add this line once to the node's
 `/etc/fstab`:
 
 ```fstab
-192.168.10.9:/volume1/media /mnt/media nfs ro,_netdev,nofail,x-systemd.automount,x-systemd.mount-timeout=30s 0 0
+192.168.10.9:/volume1/media /mnt/media nfs ro,hard,_netdev,nofail,x-systemd.automount,x-systemd.idle-timeout=0,x-systemd.mount-timeout=30s 0 0
 ```
+
+This creates systemd's `mnt-media.automount` and `mnt-media.mount` units. The
+automount mounts the share on access; `hard` keeps retrying NFS requests while
+the NAS is unavailable, so reads resume after a normal NAS reboot. Playback may
+pause during the outage. The 30-second timeout applies to establishing the mount,
+not ongoing NFS recovery. Idle unmounting is disabled to keep the LXC bind mount
+attached to the same filesystem; do not unmount/remount it during a NAS reboot.
 
 ```sh
 mkdir -p /mnt/media
 systemctl daemon-reload
 systemctl start mnt-media.automount
+systemctl is-active mnt-media.automount
 ls /mnt/media
 findmnt --mountpoint /mnt/media
 ```
@@ -47,6 +55,9 @@ inside the LXC; with Proxmox's default unprivileged mapping that is
 files and traverse directories, or use a dedicated read-only NAS export with an
 appropriate identity mapping. Do not recursively change ownership of the shared
 media library.
+
+References: [systemd automounts](https://www.freedesktop.org/software/systemd/man/latest/systemd.automount.html),
+[NFS hard-mount recovery](https://www.man7.org/linux/man-pages/man5/nfs.5.html).
 
 ## Create the container
 

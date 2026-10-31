@@ -28,15 +28,18 @@
       caddyPkgs = caddy-nixpkgs.legacyPackages.x86_64-linux;
     in
     {
-      nixosConfigurations.docker = nixpkgs.lib.nixosSystem {
+      nixosConfigurations.podman = nixpkgs.lib.nixosSystem {
         specialArgs = { inherit caddyPkgs; };
         modules = [
           disko.nixosModules.disko
           sops-nix.nixosModules.sops
-          ./hosts/docker
+          ./hosts/podman
           { system.configurationRevision = self.rev or self.dirtyRev or null; }
         ];
       };
+
+      # Let the existing docker host pick up its hostname/target rename.
+      nixosConfigurations.docker = self.nixosConfigurations.podman;
 
       nixosConfigurations.plex = nixpkgs.lib.nixosSystem {
         modules = [

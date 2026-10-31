@@ -36,7 +36,7 @@ jobs:
       - name: Validate Nix configuration
         run: |
           nix flake check --no-build --all-systems
-          nix eval --raw .#nixosConfigurations.docker.config.system.build.toplevel.drvPath
+          nix eval --raw .#nixosConfigurations.podman.config.system.build.toplevel.drvPath
           nix eval --raw .#packages.x86_64-linux.plex-lxc.drvPath
       - name: Build Caddy and validate its configuration
         if: steps.caddy.outputs.build == 'true'

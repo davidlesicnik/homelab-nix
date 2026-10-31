@@ -3,11 +3,12 @@
 Unprivileged x86-64 NixOS template for Proxmox, with Plex and Intel VA-API / Quick
 Sync drivers. Proxmox controls networking, media mounts and GPU access. Plex data
 is stored on the LXC root disk at `/var/lib/plex` (included in root-disk backups).
-SSH uses the same public key as the `docker` host. GitHub Actions builds system
+SSH uses the same public key as the `podman` host. GitHub Actions builds system
 updates; the LXC checks for signed builds every two minutes and installs them
 without building packages locally or rebooting automatically.
 
 The native Beszel agent reports LXC metrics to the existing hub over HTTPS.
+The guest uses the LAN DNS resolver for private service names.
 Its token is encrypted in `secrets.yaml`. Before applying this configuration to
 a new guest, provision its SOPS identity at `/var/lib/sops-nix/key.txt` (mode
 `0600`) and update the recipient and encrypted file; see [secrets](../../secrets.md).
@@ -29,7 +30,7 @@ into the image.
 
 ## Mount media on Proxmox
 
-Use the same NAS export as the Docker VM, mounted **on the Proxmox node**.
+Use the same NAS export as the Podman VM, mounted **on the Proxmox node**.
 If `/mnt/media` already contains another mount or files, use a dedicated path
 instead and adjust the commands below. Add this line once to the node's
 `/etc/fstab`:

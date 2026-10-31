@@ -26,7 +26,7 @@
   sops.secrets."beszel-agent/token".sopsFile = ./secrets.yaml;
 
   networking = {
-    hostName = "docker";
+    hostName = "podman";
     useDHCP = false;
     interfaces.ens18 = {
       useDHCP = false;

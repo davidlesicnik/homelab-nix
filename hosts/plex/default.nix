@@ -18,7 +18,9 @@
   nixpkgs.config.allowUnfreePredicate = pkg:
     builtins.elem (lib.getName pkg) [ "plexmediaserver" ];
 
-  # Proxmox supplies the hostname, network configuration and DNS.
+  # Proxmox supplies the hostname, addresses and routes. The LAN resolver is
+  # needed for private service names; resolved otherwise uses public fallbacks.
+  networking.nameservers = [ "192.168.10.9" ];
   proxmoxLXC = {
     privileged = false;
     manageNetwork = false;

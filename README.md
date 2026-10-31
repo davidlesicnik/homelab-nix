@@ -10,7 +10,7 @@ and migration notes for the existing Docker Plex server.
 ## Monitoring
 
 Both hosts run a native `beszel-agent` service, connecting outward to
-`https://beszel.lesicnik.eu` over HTTPS; no agent port is opened. The `docker`
+`https://beszel.lesicnik.eu` over HTTPS; no agent port is opened. The `podman`
 agent runs as `containers` to monitor rootless Podman and includes `/srv` usage.
 The `plex` agent monitors the LXC. Registration tokens are SOPS-encrypted in
 `hosts/<host>/secrets.yaml`. The agent version and release checksum are pinned in
@@ -19,7 +19,7 @@ The `plex` agent monitors the LXC. Registration tokens are SOPS-encrypted in
 Check with `systemctl status beszel-agent` and
 `journalctl -u beszel-agent -n 30 --no-pager` on either host.
 
-## Host: `docker`
+## Host: `podman`
 
 Proxmox, x86-64, SeaBIOS.
 
@@ -44,7 +44,7 @@ trigger the mount and `findmnt --mountpoint /mnt/media` to verify it.
 ## Install
 
 Boot the NixOS ISO with networking. Check the SSH key in
-`hosts/docker/default.nix` and push changes before installing.
+`hosts/podman/default.nix` and push changes before installing.
 
 ### 1. Clone and verify disks
 
@@ -63,7 +63,7 @@ Confirm `drive-scsi0` is the OS disk and `drive-scsi1` is the data disk.
 **This erases the OS disk.** For an existing installation, see Reinstall below.
 
 ```sh
-sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- --mode format,mount --flake "path:$PWD#docker"
+sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- --mode format,mount --flake "path:$PWD#podman"
 findmnt --mountpoint /mnt
 ```
 
@@ -92,7 +92,7 @@ sudo install -D -m 0600 /path/to/backed-up-host-key.txt /mnt/var/lib/sops-nix/ke
 sudo mkdir -p /mnt/etc/nixos
 sudo cp -a . /mnt/etc/nixos/
 sudo chown -R root:root /mnt/etc/nixos
-sudo nixos-install --flake /mnt/etc/nixos#docker
+sudo nixos-install --flake /mnt/etc/nixos#podman
 ```
 
 After installation succeeds, run `sudo poweroff`, eject the ISO, and boot from
@@ -116,7 +116,7 @@ Expect rootless `true`, storage under `/srv/podman`, and an active socket.
 Preserve `scsi1`; never initialize it again. To reuse the OS filesystem:
 
 ```sh
-sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- --mode mount --flake "path:$PWD#docker"
+sudo nix --extra-experimental-features 'nix-command flakes' run path:.#disko -- --mode mount --flake "path:$PWD#podman"
 ```
 
 Continue at install step 4. For an empty replacement OS disk, start at step 2,

@@ -1,8 +1,11 @@
 # homelab-nix
 
-NixOS homelab configs. GitOps checks `main` every minute and applies new commits.
+NixOS homelab configs. Hosts apply updates from `main` through GitOps.
 
 [Container stacks](stacks/README.md) · [Encrypted secrets](secrets.md)
+
+[Plex Proxmox LXC template](hosts/plex/README.md) — Intel transcoding, NAS media,
+and migration notes for the existing Docker Plex server.
 
 ## Host: `docker`
 

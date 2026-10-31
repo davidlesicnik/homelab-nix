@@ -1,0 +1,102 @@
+name: Plex builds and updates
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'hosts/plex/**'
+      - 'modules/nixos/common.nix'
+      - 'scripts/update-plex-lxc.py'
+      - 'tests/test_plex_update.py'
+      - 'flake.nix'
+      - 'flake.lock'
+      - '.github/workflows/plex-lxc.yml'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plex-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - run: python3 -m unittest discover -s tests -p 'test_plex_update.py'
+      - run: nix build --print-build-logs .#plex-lxc
+
+  publish:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - run: python3 -m unittest discover -s tests -p 'test_plex_update.py'
+      - name: Build Plex system
+        run: nix build --out-link result-system --print-build-logs .#nixosConfigurations.plex.config.system.build.toplevel
+      - name: Sign and publish the system closure
+        env:
+          PLEX_CACHE_SIGNING_KEY: ${{ secrets.PLEX_CACHE_SIGNING_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="plex-$GITHUB_SHA"
+          if gh release view "$tag" --json isDraft --jq '.isDraft' | grep -qx false; then
+            echo 'This revision is already published.'
+            exit 0
+          fi
+          test -n "$PLEX_CACHE_SIGNING_KEY"
+          key="$RUNNER_TEMP/plex-cache-key"
+          trap 'rm -f "$key"' EXIT
+          umask 077
+          printf '%s\n' "$PLEX_CACHE_SIGNING_KEY" > "$key"
+          nix key convert-secret-to-public < "$key" | diff - hosts/plex/cache-public-key
+          system=$(readlink -f result-system)
+          test "$(cat "$system/etc/plex-build-revision")" = "$GITHUB_SHA"
+          nix store sign --recursive --key-file "$key" "$system"
+          nix copy --to "file://$RUNNER_TEMP/plex-cache?compression=xz" "$system"
+          mkdir -p release
+          tar -cf release/cache.tar -C "$RUNNER_TEMP/plex-cache" .
+          digest=$(sha256sum release/cache.tar | cut -d ' ' -f 1)
+          jq -n --arg revision "$GITHUB_SHA" --arg system "$system" --arg sha256 "$digest" \
+            '{revision: $revision, system: $system, sha256: $sha256}' > release/update.json
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --target "$GITHUB_SHA" --draft --prerelease \
+              --title "Plex system $GITHUB_SHA" --notes 'Signed NixOS system for the Plex LXC.'
+          fi
+          gh release upload "$tag" release/cache.tar release/update.json --clobber
+          gh release edit "$tag" --draft=false
+      - name: Build initial LXC template
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          nix build --print-build-logs .#plex-lxc
+          mkdir -p artifacts
+          cp result/tarball/nixos-plex-x86_64-linux.tar.xz artifacts/
+          tar -tJf artifacts/nixos-plex-x86_64-linux.tar.xz > archive-contents.txt
+          grep -qx 'sbin/init' archive-contents.txt
+          grep -qx 'nix-path-registration' archive-contents.txt
+          cd artifacts
+          sha256sum nixos-plex-x86_64-linux.tar.xz > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: plex-lxc-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1

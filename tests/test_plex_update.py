@@ -18,6 +18,16 @@ SYSTEM = "/nix/store/" + "b" * 32 + "-nixos-system-plex-26.05"
 
 
 class PlexUpdateTests(unittest.TestCase):
+    def test_updater_follows_only_the_published_plex_tag(self):
+        with patch.object(updater, "command", return_value=REVISION + "\trefs/tags/plex-current") as command:
+            self.assertEqual(updater.published_revision(), REVISION)
+            self.assertEqual(command.call_args.args[-1], "refs/tags/plex-current")
+
+    def test_invalid_published_revision_is_rejected(self):
+        with patch.object(updater, "command", return_value="invalid\trefs/tags/plex-current"):
+            with self.assertRaises(ValueError):
+                updater.published_revision()
+
     def test_missing_release_waits_without_activation(self):
         error = urllib.error.HTTPError("url", 404, "missing", {}, None)
         with patch.object(updater.urllib.request, "urlopen", side_effect=error):
@@ -56,7 +66,7 @@ class PlexUpdateTests(unittest.TestCase):
             revision_file.write_text("old")
             with patch.object(updater, "STATE", root), \
                  patch.object(updater, "REVISION_FILE", revision_file), \
-                 patch.object(updater, "remote_revision", return_value=REVISION), \
+                 patch.object(updater, "published_revision", return_value=REVISION), \
                  patch.object(updater, "manifest", return_value={"system": SYSTEM, "sha256": "d" * 64}), \
                  patch.object(updater, "download_cache", return_value=root), \
                  patch.object(updater, "command", side_effect=subprocess.CalledProcessError(1, "nix copy")) as command, \
@@ -67,7 +77,7 @@ class PlexUpdateTests(unittest.TestCase):
                 self.assertIn("true", command.call_args.args)
                 activate.assert_not_called()
 
-    def test_main_advance_during_download_does_not_install_old_build(self):
+    def test_new_published_build_during_download_does_not_install_old_build(self):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
             revision_file = root / "revision"
@@ -77,7 +87,7 @@ class PlexUpdateTests(unittest.TestCase):
             (system / "etc/plex-build-revision").write_text(REVISION)
             with patch.object(updater, "STATE", root), \
                  patch.object(updater, "REVISION_FILE", revision_file), \
-                 patch.object(updater, "remote_revision", side_effect=[REVISION, "e" * 40]), \
+                 patch.object(updater, "published_revision", side_effect=[REVISION, "e" * 40]), \
                  patch.object(updater, "manifest", return_value={"system": str(system), "sha256": "d" * 64}), \
                  patch.object(updater, "download_cache", return_value=root), \
                  patch.object(updater, "command"), \
@@ -103,7 +113,7 @@ class PlexUpdateTests(unittest.TestCase):
             revision_file = pathlib.Path(directory) / "revision"
             revision_file.write_text(REVISION)
             with patch.object(updater, "REVISION_FILE", revision_file), \
-                 patch.object(updater, "remote_revision", return_value=REVISION), \
+                 patch.object(updater, "published_revision", return_value=REVISION), \
                  patch.object(updater, "manifest") as manifest, \
                  patch.object(updater, "activate") as activate:
                 updater.update()
@@ -118,7 +128,7 @@ class PlexUpdateTests(unittest.TestCase):
             (root / "failed-revision").write_text(REVISION)
             with patch.object(updater, "STATE", root), \
                  patch.object(updater, "REVISION_FILE", revision_file), \
-                 patch.object(updater, "remote_revision", return_value=REVISION), \
+                 patch.object(updater, "published_revision", return_value=REVISION), \
                  patch.object(updater, "manifest") as manifest:
                 updater.update()
                 manifest.assert_not_called()

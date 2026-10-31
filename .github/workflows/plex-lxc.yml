@@ -5,16 +5,30 @@ on:
   pull_request:
     paths:
       - 'hosts/plex/**'
+      - '!hosts/plex/**/*.md'
       - 'modules/nixos/common.nix'
       - 'modules/nixos/beszel-agent*.nix'
       - 'modules/nixos/secrets.nix'
       - 'scripts/update-plex-lxc.py'
-      - 'tests/test_plex_update.py'
+      - 'scripts/plex-build-required.py'
+      - 'tests/test_plex_*.py'
       - 'flake.nix'
       - 'flake.lock'
       - '.github/workflows/plex-lxc.yml'
   push:
     branches: [main]
+    paths:
+      - 'hosts/plex/**'
+      - '!hosts/plex/**/*.md'
+      - 'modules/nixos/common.nix'
+      - 'modules/nixos/beszel-agent*.nix'
+      - 'modules/nixos/secrets.nix'
+      - 'scripts/update-plex-lxc.py'
+      - 'scripts/plex-build-required.py'
+      - 'tests/test_plex_*.py'
+      - 'flake.nix'
+      - 'flake.lock'
+      - '.github/workflows/plex-lxc.yml'
 
 permissions:
   contents: read
@@ -24,8 +38,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.plex.outputs.build }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p 'test_plex_*.py'
+      - name: Check whether Plex build inputs changed
+        id: plex
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          build=$(python3 scripts/plex-build-required.py)
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+
   check:
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.build == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -37,7 +72,8 @@ jobs:
       - run: nix build --print-build-logs .#plex-lxc
 
   publish:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: changes
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && needs.changes.outputs.build == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
@@ -45,6 +81,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
       - run: python3 -m unittest discover -s tests -p 'test_plex_update.py'
@@ -83,6 +120,25 @@ jobs:
           fi
           gh release upload "$tag" release/cache.tar release/update.json --clobber
           gh release edit "$tag" --draft=false
+      - name: Select the successfully published Plex build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          current=$(git ls-remote origin refs/tags/plex-current | cut -f1)
+          if [ -n "$current" ]; then
+            git fetch --no-tags origin "$current"
+            if ! git merge-base --is-ancestor "$current" "$GITHUB_SHA"; then
+              echo 'A newer Plex build is already selected.'
+              exit 0
+            fi
+            gh api --method PATCH "repos/$GH_REPO/git/refs/tags/plex-current" \
+              -f sha="$GITHUB_SHA" -F force=false > /dev/null
+          else
+            gh api --method POST "repos/$GH_REPO/git/refs" \
+              -f ref=refs/tags/plex-current -f sha="$GITHUB_SHA" > /dev/null
+          fi
       - name: Build initial LXC template
         if: github.event_name == 'workflow_dispatch'
         run: |

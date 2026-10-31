@@ -24,11 +24,11 @@ def command(*args, timeout=900):
     return subprocess.check_output(args, text=True, timeout=timeout).strip()
 
 
-def remote_revision():
+def published_revision():
     revision = command("git", "ls-remote", "--exit-code", REPOSITORY + ".git",
-                       "refs/heads/main", timeout=45).split()[0]
+                       "refs/tags/plex-current", timeout=45).split()[0]
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
-        raise ValueError("Invalid main revision")
+        raise ValueError("Invalid Plex deployment revision")
     return revision
 
 
@@ -92,12 +92,12 @@ def activate(system):
 
 
 def update():
-    revision = remote_revision()
+    revision = published_revision()
     if REVISION_FILE.read_text().strip() == revision:
         return
     failed = STATE / "failed-revision"
     if failed.exists() and failed.read_text().strip() == revision:
-        print(f"Not retrying failed revision {revision}; waiting for a new commit", flush=True)
+        print(f"Not retrying failed revision {revision}; waiting for a newer Plex build", flush=True)
         return
     data = manifest(revision)
     if data is None:
@@ -114,8 +114,8 @@ def update():
                 "--out-link", str(work / "candidate"), system)
         if (pathlib.Path(system) / "etc/plex-build-revision").read_text().strip() != revision:
             raise ValueError("Signed system does not match the requested revision")
-        if remote_revision() != revision:
-            print("Main advanced during download; waiting for the newer build", flush=True)
+        if published_revision() != revision:
+            print("A newer Plex build was published during download; waiting for it", flush=True)
             return
         try:
             activate(system)

@@ -203,18 +203,22 @@ Confirm external playback from a phone with Wi-Fi disabled.
 
 ## Updates
 
-GitHub's standard Linux runner builds the complete Plex system after each push
-to `main`, signs its Nix store closure and publishes a `plex-COMMIT` prerelease
-containing `cache.tar` and `update.json`. Relevant pull requests build the template
-without publishing updates. Manual runs on `main` also produce a downloadable
-initial template. The repository is public, so standard runner execution is free.
+GitHub's standard Linux runner builds the Plex system when its sources, shared
+modules or dependencies change, signs its Nix store closure and publishes a
+`plex-COMMIT` prerelease containing `cache.tar` and `update.json`. Other host,
+container-stack and documentation changes skip Plex. Caddy-only and Disko-only
+lock updates also skip it; `flake.nix` changes are treated as shared configuration.
+Relevant pull requests build the template without publishing updates. Manual
+runs on `main` force a build and also produce a downloadable initial template.
 
-The LXC checks `main` and waits until that exact commit's release is available.
+Only after a successful publication does CI advance the lightweight
+`plex-current` tag. Older workflow reruns cannot move it backwards. The LXC
+follows that tag, so unrelated `main` commits need no new Plex release.
 It downloads the cache, verifies its checksum and Nix signatures, imports the
 already-built system, and switches to it. It never evaluates the flake or compiles
-updates. If `main` advances during download, it waits for the newer build. Failed
+updates. If a newer Plex build is published during download, it waits for that build. Failed
 activation or a failed Plex health check restores the previous NixOS system.
-The failed commit is skipped until a newer commit is published (to retry it,
+The failed build is skipped until a newer Plex build is published (to retry it,
 remove `/var/lib/plex-update/failed-revision` and start the updater again);
 this does not roll back Plex's database, so retain backups before package upgrades.
 No SSH access from GitHub, local runner or GitHub credentials in the LXC are needed.

@@ -162,6 +162,39 @@ reused. Avoid claiming a fresh server before importing the existing server data.
 For rollback, stop the LXC's Plex service and restart the original Docker server
 with its untouched volume; changes made after cutover will not be in that volume.
 
+## Claim or reclaim the server
+
+Normal updates and reboots do not require a claim code. The migrated
+`Preferences.xml` preserves the server identity and account token; include it
+when backing up `/var/lib/plex`.
+
+Only if Plex becomes unclaimed:
+
+1. Connect with `ssh root@192.168.10.30`.
+2. Sign in at [plex.tv/claim](https://plex.tv/claim/) and copy a fresh code.
+   Use it within four minutes.
+3. Run this in the LXC's Bash shell and paste the code at the hidden prompt:
+
+   ```bash
+   read -rsp "Claim code: " plex_claim; echo
+   curl -fsS -X POST -o /dev/null \
+     "http://127.0.0.1:32400/myplex/claim?token=$plex_claim"
+   unset plex_claim
+   ```
+
+The request runs locally and suppresses the account response. The code is not
+saved in shell history. Never commit claim codes or account tokens to Git, and
+do not delete `Preferences.xml` to obtain a new code.
+
+See [Plex's manual claim procedure](https://forums.plex.tv/t/cannot-claim-server/724877).
+
+## Remote access
+
+The router forwards public TCP port `32400` to `192.168.10.30:32400`. In Plex's
+**Settings → Remote Access**, enable **Manually specify public port**, enter
+`32400`, and apply/retry. The router rule and Plex's public port must match.
+Confirm external playback from a phone with Wi-Fi disabled.
+
 ## Updates
 
 GitHub's standard Linux runner builds the complete Plex system after each push

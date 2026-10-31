@@ -24,6 +24,7 @@
 
   services.plex = {
     enable = true;
+    package = pkgs.callPackage ./package.nix { };
     openFirewall = true;
     dataDir = "/var/lib/plex";
     accelerationDevices = [ "/dev/dri/renderD128" ];

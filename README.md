@@ -149,7 +149,12 @@ container UID/GID mappings unchanged. GitOps uses the remote branch, not `/etc/n
 `@davidlesicnik` owns every file through `.github/CODEOWNERS`, including the
 ownership file and workflows. PRs run workflow and shell linting, Python tests,
 mocked disk initialization guard tests, Nix evaluation for both hosts, and Caddy
-and Plex builds when their inputs change. GitHub Actions dependencies receive
+and Plex builds when their inputs change. Caddy builds run for package, image,
+or configuration changes and updates to its dedicated dependency pin. For
+`flake.nix` edits, CI compares the Caddy image and configuration derivations
+against the base revision; unrelated flake edits skip the build. Workflow,
+updater, test, documentation, and host deployment edits alone do not trigger it.
+Manual workflow dispatch still forces a build. GitHub Actions dependencies receive
 weekly Dependabot updates; action references stay pinned to commit SHAs.
 
 To enforce this policy, configure an active GitHub ruleset for `main` (repository

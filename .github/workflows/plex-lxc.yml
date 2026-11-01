@@ -3,18 +3,6 @@ name: Plex builds and updates
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - 'hosts/plex/**'
-      - '!hosts/plex/**/*.md'
-      - 'modules/nixos/common.nix'
-      - 'modules/nixos/beszel-agent*.nix'
-      - 'modules/nixos/secrets.nix'
-      - 'scripts/update-plex-lxc.py'
-      - 'scripts/plex-build-required.py'
-      - 'tests/test_plex_*.py'
-      - 'flake.nix'
-      - 'flake.lock'
-      - '.github/workflows/plex-lxc.yml'
   push:
     branches: [main]
     paths:
@@ -70,6 +58,27 @@ jobs:
       - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
       - run: python3 -m unittest discover -s tests -p 'test_plex_update.py'
       - run: nix build --print-build-logs .#plex-lxc
+
+  required:
+    name: Plex PR checks
+    if: always() && github.event_name == 'pull_request'
+    needs: [changes, check]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require successful detection and any necessary build
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          BUILD_REQUIRED: ${{ needs.changes.outputs.build }}
+          BUILD_RESULT: ${{ needs.check.result }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          if [ "$BUILD_REQUIRED" = true ]; then
+            test "$BUILD_RESULT" = success
+          else
+            test "$BUILD_REQUIRED" = false
+            test "$BUILD_RESULT" = skipped
+          fi
 
   publish:
     needs: changes

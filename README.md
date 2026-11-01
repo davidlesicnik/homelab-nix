@@ -130,7 +130,8 @@ remain manual. Caddy uses its own `caddy-nixpkgs` pin and a separate weekly upda
 that also refreshes its plugin and dependency hash. Host-only lock updates skip
 Caddy builds. See [container updates](stacks/README.md#container-image-updates).
 
-Commit and push to `main`. To check immediately, run as root:
+Open a PR and merge it into `main` after the required checks and owner review.
+To check for a merged update immediately, run as root:
 
 ```sh
 systemctl start nixos-upgrade.service
@@ -142,3 +143,35 @@ To refresh host dependencies manually, use `nix flake update nixpkgs disko sops-
 Use `python3 scripts/update-caddy.py` on Linux for Caddy, so its hash is refreshed too.
 Keep `system.stateVersion` and
 container UID/GID mappings unchanged. GitOps uses the remote branch, not `/etc/nixos`.
+
+## PR checks and ownership
+
+`@davidlesicnik` owns every file through `.github/CODEOWNERS`, including the
+ownership file and workflows. PRs run workflow and shell linting, Python tests,
+mocked disk initialization guard tests, Nix evaluation for both hosts, and Caddy
+and Plex builds when their inputs change. Caddy builds run for package, image,
+or configuration changes and updates to its dedicated dependency pin. For
+`flake.nix` edits, CI compares the Caddy image and configuration derivations
+against the base revision; unrelated flake edits skip the build. Workflow,
+updater, test, documentation, and host deployment edits alone do not trigger it.
+Manual workflow dispatch still forces a build. GitHub Actions dependencies receive
+weekly Dependabot updates; action references stay pinned to commit SHAs.
+
+To enforce this policy, configure an active GitHub ruleset for `main` (repository
+Settings → Rules → Rulesets):
+
+- Require a pull request, one approval, and review from Code Owners.
+- Dismiss stale approvals when new commits are pushed and require resolved conversations.
+- Require status checks `build` (the Nix checks workflow) and `Plex PR checks`,
+  with the branch up to date before merging. Select their GitHub Actions source.
+- Block force pushes and branch deletion; keep the bypass list empty if admins
+  should also follow these rules.
+
+Land these files and let the checks run before selecting the required checks.
+Do not require the conditional Plex `check` job: `Plex PR checks` reports success
+when a build is unnecessary and fails if detection or a required build fails.
+CODEOWNERS alone does not restrict writes or merges; the ruleset must be enabled
+on GitHub. Other collaborators can still propose changes, but merging them requires
+the owner's approval. GitHub does not allow authors to approve their own PRs, so
+making the sole owner a required reviewer also blocks that owner's own PRs unless
+another owner is added or an explicit bypass policy is configured.

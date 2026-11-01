@@ -22,6 +22,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
       - name: Check whether Caddy build inputs changed
         id: caddy
         env:
@@ -30,7 +31,14 @@ jobs:
         run: |
           build=$(python3 scripts/caddy-build-required.py)
           echo "build=$build" >> "$GITHUB_OUTPUT"
-      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - name: Lint workflows and shell scripts
+        run: |
+          nix shell --inputs-from . nixpkgs#actionlint nixpkgs#shellcheck --command bash -euo pipefail -c '
+            actionlint
+            shellcheck -x scripts/*.sh tests/*.sh
+          '
+      - name: Test disk initialization guards
+        run: bash tests/initialize-container-disk.sh
       - name: Test updater failure handling
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Validate Nix configuration

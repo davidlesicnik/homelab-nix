@@ -27,7 +27,7 @@ Proxmox, x86-64, SeaBIOS.
 | --- | --- |
 | SSH | `root@192.168.10.20` or `containers@192.168.10.20` |
 | Network | `ens18`, `192.168.10.20/24` |
-| Gateway / DNS | `192.168.10.1` / `192.168.10.9` |
+| Gateway / DNS | `192.168.10.1` / `192.168.10.20` |
 | OS disk | `scsi0`, 32 GiB |
 | Container disk | `scsi1`, 200 GiB, ext4 at `/srv` |
 | Media mount | `192.168.10.9:/volume1/media` (NFS) at `/mnt/media`, mounted on access |

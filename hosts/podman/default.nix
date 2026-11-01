@@ -43,7 +43,7 @@
       address = "192.168.10.1";
       interface = "ens18";
     };
-    nameservers = [ "192.168.10.9" ];
+    nameservers = [ "192.168.10.20" ];
   };
 
   users.users.root.openssh.authorizedKeys.keys = [

@@ -31,3 +31,13 @@ updates:
       # PostgreSQL major upgrades require an explicit database migration.
       - dependency-name: library/postgres
         versions: [">=17"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Europe/Ljubljana
+    groups:
+      github-actions:
+        patterns: ["*"]

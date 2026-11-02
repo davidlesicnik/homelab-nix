@@ -1,0 +1,1 @@
+FROM ghcr.io/hargata/lubelogger:1.7.4@sha256:483a9d7582c4e6258615fd822b3de4193b4fcc4230d0a92432c6d407faf75af2

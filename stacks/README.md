@@ -25,7 +25,7 @@ declarations and do not introduce another build. Keep them to that one line.
 External containers must use `imageManifest`; host evaluation rejects omissions.
 
 Review and merge PRs to deploy through GitOps. PostgreSQL stays on major version
-16; a major upgrade requires a separate database migration. Use specific version
+16 for Litara and 18 for LubeLogger; major upgrades require a database migration. Use specific version
 tags for external images so PRs show version changes instead of digest changes.
 Caddy is built locally and retains its dedicated updater below. CI evaluates the
 host on every PR. It builds and validates Caddy only when its files, dedicated input,
@@ -353,3 +353,35 @@ Caddy at `https://torrent.lesicnik.eu`. Keep any router forwarding pointed at
 and remote path mappings. The copied authentication whitelist additionally
 trusts the new Podman proxy subnet, matching the old proxy's existing access.
 Migration backup and inventory are retained in `/srv/qbittorrent/migration-20261030`.
+
+
+## LubeLogger
+
+Caddy serves `https://fuel.lesicnik.eu` through `lubelogger:8080` on `proxy`.
+The migrated application is pinned to `1.7.4` and PostgreSQL to `18.6`, with
+both original image digests preserved. PostgreSQL joins only the private
+`lubelogger` network and has no published port.
+
+`/srv/lubelogger/data` contains uploads, settings and all application files;
+`/srv/lubelogger/keys` preserves ASP.NET encryption keys. The database lives in
+volume `lubelogger-postgres-data`, mounted at `/var/lib/postgresql` for PostgreSQL
+18. Original credentials and Authelia OIDC settings are preserved; credentials
+are encrypted in `lubelogger/secrets.yaml`.
+
+Startup requires `/srv/lubelogger/.migration-complete`. Restore that marker only
+with a verified database, data directory and encryption keys. The migration on
+2026-11-02 verified identical row counts and content hashes for all 22 tables,
+including 4 vehicles and 68 fuel records, plus checksums for all 16 data/key
+files. Restricted backups and verification evidence are retained under
+`/srv/lubelogger/migration-20261102`. The original `ugi` containers and volumes
+remain intact, stopped with restart policies disabled.
+
+Back up both PostgreSQL and the data/key directories; the application's built-in
+backup alone does not include PostgreSQL records. For rollback, stop the new
+app before restarting the old stack and restoring routing; changes made since
+the migration must first be copied back.
+
+```sh
+systemctl status podman-lubelogger.service podman-lubelogger-db.service
+journalctl -u podman-lubelogger.service -n 30 --no-pager
+```

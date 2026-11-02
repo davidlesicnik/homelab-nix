@@ -28,9 +28,9 @@ updates:
       - dependency-name: git.lesicnik.eu/david/ha-tablet
       # The HA Phone build pipeline owns this image pin.
       - dependency-name: git.lesicnik.eu/david/ha-phone
-      # PostgreSQL major upgrades require an explicit database migration.
+      # PostgreSQL majors stay at each stack's migrated version.
       - dependency-name: library/postgres
-        versions: [">=17"]
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

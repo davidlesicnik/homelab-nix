@@ -15,6 +15,8 @@ Each `stacks/<name>/default.nix` is a NixOS module for one or more containers.
 
 `modules/nixos/containers.nix` supplies rootless defaults and the shared `proxy`
 network. Images and volumes live on `/srv`; removing a stack preserves its volumes.
+The proxy network sends external DNS queries to host-networked AdGuard through
+pasta's host alias (`169.254.1.2`), avoiding stale host resolver settings.
 
 ## Container image updates
 

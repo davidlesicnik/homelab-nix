@@ -65,7 +65,14 @@ in
         };
         path = [ config.virtualisation.podman.package ];
         script = ''
-          podman network exists proxy || podman network create --driver bridge proxy
+          # Reach host-networked AdGuard through pasta's host alias. The LAN
+          # address refers to pasta's own interface, and its default DNS
+          # forwarder retains the resolver that was present at startup.
+          if podman network exists proxy; then
+            podman network update --dns-add 169.254.1.2 proxy
+          else
+            podman network create --driver bridge --dns 169.254.1.2 proxy
+          fi
         '';
         serviceConfig = {
           Type = "oneshot";

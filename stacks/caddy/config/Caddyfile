@@ -72,14 +72,6 @@ ha.lesicnik.eu {
     reverse_proxy 192.168.10.21:8123
 }
 
-obsidian.lesicnik.eu {
-    reverse_proxy couchdb:5984 {
-        header_up Host {host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-    }
-}
-
 phone.lesicnik.eu {
     import cert
 

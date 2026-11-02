@@ -8,7 +8,11 @@ updates; the LXC checks for signed builds every two minutes and installs them
 without building packages locally or rebooting automatically.
 
 The native Beszel agent reports LXC metrics to the existing hub over HTTPS.
-The guest uses the LAN DNS resolver for private service names.
+The guest imports `/etc/resolv.conf` supplied by Proxmox at boot. Configure DNS
+in the container's Proxmox settings (currently `192.168.10.20`); if set to inherit,
+Proxmox supplies the node's DNS settings. Stop/start the container after changing
+DNS. Do not hardcode guest nameservers or enable `systemd-resolved`, which would
+replace the host-supplied file during startup.
 Its token is encrypted in `secrets.yaml`. Before applying this configuration to
 a new guest, provision its SOPS identity at `/var/lib/sops-nix/key.txt` (mode
 `0600`) and update the recipient and encrypted file; see [secrets](../../secrets.md).
@@ -81,7 +85,7 @@ pct create "$CTID" local:vztmpl/nixos-plex-x86_64-linux.tar.xz \
   --cores 4 --memory 4096 --swap 512 \
   --rootfs local-lvm:32 \
   --net0 name=eth0,bridge=vmbr0,ip=dhcp \
-  --nameserver 192.168.10.9 \
+  --nameserver 192.168.10.20 \
   --mp0 /mnt/media,mp=/mnt/media,ro=1,backup=0 \
   --onboot 0
 ```

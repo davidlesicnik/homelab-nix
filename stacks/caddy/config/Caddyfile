@@ -64,7 +64,7 @@ fuel.lesicnik.eu {
 
 git.lesicnik.eu {
     import cert
-    reverse_proxy forgejo:3000
+    reverse_proxy 192.168.10.9:3000
 }
 
 ha.lesicnik.eu {

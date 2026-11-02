@@ -18,9 +18,10 @@
   nixpkgs.config.allowUnfreePredicate = pkg:
     builtins.elem (lib.getName pkg) [ "plexmediaserver" ];
 
-  # Proxmox supplies the hostname, addresses and routes. The LAN resolver is
-  # needed for private service names; resolved otherwise uses public fallbacks.
-  networking.nameservers = [ "192.168.10.9" ];
+  # Import Proxmox's resolv.conf at boot instead of replacing it with resolved's
+  # stub. DNS changes in the CT settings then survive guest startup and updates.
+  networking.useHostResolvConf = lib.mkForce true;
+  services.resolved.enable = lib.mkForce false;
   proxmoxLXC = {
     privileged = false;
     manageNetwork = false;

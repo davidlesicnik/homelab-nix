@@ -16,6 +16,7 @@
     ../../stacks/beszel
     ../../stacks/dockhand
     ../../stacks/qbittorrent
+    ../../stacks/lubelogger
     ../../stacks/litara
     ../../stacks/sabnzbd
     ../../stacks/prowlarr

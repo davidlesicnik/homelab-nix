@@ -17,8 +17,6 @@ updates:
   - package-ecosystem: docker
     directories:
       - /stacks/**
-    exclude-paths:
-      - /stacks/lubelogger/**
     schedule:
       interval: weekly
       day: monday
@@ -30,20 +28,9 @@ updates:
       - dependency-name: git.lesicnik.eu/david/ha-tablet
       # The HA Phone build pipeline owns this image pin.
       - dependency-name: git.lesicnik.eu/david/ha-phone
-      # Litara stays on PostgreSQL 16; major upgrades require migration.
+      # PostgreSQL majors stay at each stack's migrated version.
       - dependency-name: library/postgres
-        versions: [">=17"]
-  - package-ecosystem: docker
-    directory: /stacks/lubelogger
-    schedule:
-      interval: weekly
-      day: monday
-      time: "08:00"
-      timezone: Europe/Ljubljana
-    ignore:
-      # Keep the migrated PostgreSQL 18 major version.
-      - dependency-name: library/postgres
-        versions: [">=19"]
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

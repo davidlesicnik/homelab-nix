@@ -18,9 +18,10 @@
   nixpkgs.config.allowUnfreePredicate = pkg:
     builtins.elem (lib.getName pkg) [ "plexmediaserver" ];
 
-  # Import Proxmox's resolv.conf at boot instead of replacing it with resolved's
-  # stub. DNS changes in the CT settings then survive guest startup and updates.
-  networking.useHostResolvConf = lib.mkForce true;
+  # Proxmox writes resolv.conf before guest startup. Leave it untouched: the
+  # systemd init path skips useHostResolvConf's import, so openresolv would
+  # overwrite the supplied nameservers with an empty configuration at boot.
+  networking.resolvconf.enable = lib.mkForce false;
   services.resolved.enable = lib.mkForce false;
   proxmoxLXC = {
     privileged = false;

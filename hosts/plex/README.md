@@ -8,11 +8,19 @@ updates; the LXC checks for signed builds every two minutes and installs them
 without building packages locally or rebooting automatically.
 
 The native Beszel agent reports LXC metrics to the existing hub over HTTPS.
-The guest imports `/etc/resolv.conf` supplied by Proxmox at boot. Configure DNS
+The guest preserves `/etc/resolv.conf` supplied by Proxmox at boot. Configure DNS
 in the container's Proxmox settings (currently `192.168.10.20`); if set to inherit,
 Proxmox supplies the node's DNS settings. Stop/start the container after changing
-DNS. Do not hardcode guest nameservers or enable `systemd-resolved`, which would
-replace the host-supplied file during startup.
+DNS. Both `networking.resolvconf` and `systemd-resolved` are disabled so neither
+can replace the host-supplied file. `useHostResolvConf` alone does not protect
+the file with systemd init. Verify DNS and the agent after a full stop/start:
+
+```sh
+cat /etc/resolv.conf
+getent hosts beszel.lesicnik.eu
+journalctl -u beszel-agent -n 10 --no-pager
+```
+
 Its token is encrypted in `secrets.yaml`. Before applying this configuration to
 a new guest, provision its SOPS identity at `/var/lib/sops-nix/key.txt` (mode
 `0600`) and update the recipient and encrypted file; see [secrets](../../secrets.md).

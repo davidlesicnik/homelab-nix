@@ -4,6 +4,9 @@ NixOS homelab configs. Hosts apply updates from `main` through GitOps.
 
 [Container stacks](stacks/README.md) · [Encrypted secrets](secrets.md)
 
+[Podman backups](hosts/podman/BACKUPS.md) — nightly Restic backups at 01:00
+Europe/Ljubljana to the NAS over SFTP, with retention and restore instructions.
+
 [Plex Proxmox LXC template](hosts/plex/README.md) — Intel transcoding, NAS media,
 and migration notes for the existing Docker Plex server.
 
@@ -35,7 +38,8 @@ Proxmox, x86-64, SeaBIOS.
 | Podman socket | `/run/user/1000/podman/podman.sock` |
 
 Reserve `.20` outside DHCP. Run Podman as `containers`; Docker and the rootful
-API are disabled. Container services require `/srv`. Back up important volumes.
+API are disabled. Container services require `/srv`. Restic backs up persistent
+application data; NAS media is excluded.
 
 The NFS server controls media permissions; allow the container user's UID/GID
 `1000` as needed. After applying the configuration, run `ls /mnt/media` to

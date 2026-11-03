@@ -16,17 +16,17 @@
 
   virtualisation.oci-containers.containers.immich-kiosk = {
     imageManifest = ./Dockerfile;
+    healthcheck.command = [
+      "/kiosk"
+      "--healthcheck"
+    ];
     networks = [ "proxy" ];
     labels."dockhand.url" = "https://kiosk.lesicnik.eu";
     # Changes to these settings regenerate the service and recreate the container.
     environment = import ./config.nix;
     environmentFiles = [ config.sops.templates."kiosk.env".path ];
     volumes = [ "kiosk-config:/config" ];
-    extraOptions = [
-      "--tty"
-      # Match Compose: the distroless image has no shell for its healthcheck.
-      "--no-healthcheck"
-    ];
+    extraOptions = [ "--tty" ];
   };
 
   systemd.services.podman-immich-kiosk = {

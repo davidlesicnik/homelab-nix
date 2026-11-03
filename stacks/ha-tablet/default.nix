@@ -12,6 +12,15 @@
 
   virtualisation.oci-containers.containers.ha-tablet = {
     imageManifest = ./Dockerfile;
+    # Unknown paths return index.html: check real content and the mounted config.
+    healthcheck.command = [
+      "/bin/sh"
+      "-ec"
+      ''
+        curl -fsS --max-time 3 http://127.0.0.1/ | grep -qi '<html'
+        curl -fsS --max-time 3 http://127.0.0.1/config.json | cmp -s /usr/share/nginx/html/config.json -
+      ''
+    ];
     networks = [ "proxy" ];
     volumes = [
       "${config.sops.secrets."ha-tablet/config_json".path}:/usr/share/nginx/html/config.json:ro"

@@ -45,6 +45,15 @@ in
   virtualisation.oci-containers.containers = {
     litara = {
       imageManifest = ./Dockerfile;
+      healthcheck.command = [
+        "wget"
+        "-q"
+        "-T"
+        "5"
+        "-O"
+        "/dev/null"
+        "http://127.0.0.1:3000/api/v1/setup/status"
+      ];
       dependsOn = [ "litara-postgres" ];
       networks = [ "proxy" "litara" ];
       environmentFiles = [ config.sops.templates."litara.env".path ];
@@ -61,13 +70,19 @@ in
       environmentFiles = [ config.sops.templates."litara-postgres.env".path ];
       volumes = [ "litara-postgres-data:/var/lib/postgresql/data" ];
       # Preserve the database hostname in the source application's DATABASE_URL.
-      extraOptions = [
-        "--network-alias=postgres"
-        "--health-cmd=pg_isready -U postgres -d litara"
-        "--health-interval=5s"
-        "--health-timeout=5s"
-        "--health-retries=12"
-      ];
+      extraOptions = [ "--network-alias=postgres" ];
+      healthcheck = {
+        command = [
+          "pg_isready"
+          "-U"
+          "postgres"
+          "-d"
+          "litara"
+        ];
+        interval = "5s";
+        timeout = "5s";
+        retries = 12;
+      };
     };
   };
 

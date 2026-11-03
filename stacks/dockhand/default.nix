@@ -11,6 +11,17 @@ in
 {
   virtualisation.oci-containers.containers.dockhand = {
     imageManifest = ./Dockerfile;
+    healthcheck.command = [
+      "curl"
+      "--fail"
+      "--silent"
+      "--show-error"
+      "--max-time"
+      "5"
+      "--output"
+      "/dev/null"
+      "http://127.0.0.1:3000/api/health"
+    ];
     networks = [ "proxy" ];
     # Container root maps to the unprivileged containers user on the host,
     # giving access to that user's API socket without exposing the rootful API.

@@ -2,6 +2,7 @@
   config,
   lib,
   caddyPkgs,
+  pkgs,
   ...
 }:
 let
@@ -26,6 +27,16 @@ in
   virtualisation.oci-containers.containers.caddy = {
     image = "${image.imageName}:${image.imageTag}";
     imageFile = image;
+    healthcheck.command = [
+      "/run/healthcheck-busybox"
+      "wget"
+      "-q"
+      "-T"
+      "5"
+      "-O"
+      "/dev/null"
+      "http://127.0.0.1:8081/health"
+    ];
     networks = [ "proxy" ];
     ports = [
       "80:80"
@@ -34,6 +45,7 @@ in
     ];
     environmentFiles = [ config.sops.templates."caddy.env".path ];
     volumes = [
+      "${pkgs.pkgsStatic.busybox}/bin/busybox:/run/healthcheck-busybox:ro"
       "${caddyConfig}:/etc/caddy:ro"
       "caddy-data:/data"
       "caddy-config:/config"

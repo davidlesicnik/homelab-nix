@@ -49,6 +49,15 @@ in
 
   virtualisation.oci-containers.containers.authelia = {
     imageManifest = ./Dockerfile;
+    healthcheck.command = [
+      "wget"
+      "-q"
+      "-T"
+      "5"
+      "-O"
+      "/dev/null"
+      "http://127.0.0.1:9091/api/health"
+    ];
     networks = [ "proxy" ];
     volumes = [
       "${config.sops.templates."authelia-configuration.yml".path}:/config/configuration.yml:ro"

@@ -2,6 +2,17 @@
 {
   virtualisation.oci-containers.containers.qbittorrent = {
     imageManifest = ./Dockerfile;
+    healthcheck.command = [
+      "curl"
+      "--fail"
+      "--silent"
+      "--show-error"
+      "--max-time"
+      "5"
+      "--output"
+      "/dev/null"
+      "http://127.0.0.1:1234/api/v2/app/version"
+    ];
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

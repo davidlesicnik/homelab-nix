@@ -2,6 +2,12 @@
     acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 }
 
+# Container-local serving check; this port is not published.
+http://127.0.0.1:8081 {
+    bind 127.0.0.1
+    respond /health "OK" 200
+}
+
 (cert) {
     encode zstd gzip
 

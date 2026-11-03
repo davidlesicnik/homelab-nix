@@ -29,6 +29,17 @@ in
     lubelogger = {
       imageManifest = ./Dockerfile;
       dependsOn = [ "lubelogger-db" ];
+      # Static wget works in this image without a shell or HTTP client.
+      healthcheck.command = [
+        "/run/healthcheck-busybox"
+        "wget"
+        "-q"
+        "-T"
+        "5"
+        "-O"
+        "/dev/null"
+        "http://127.0.0.1:8080/health"
+      ];
       networks = [ "proxy" "lubelogger" ];
       environment = {
         "LANG" = "sl_SI";
@@ -48,6 +59,7 @@ in
       };
       environmentFiles = [ config.sops.secrets."lubelogger/app_env".path ];
       volumes = [
+        "${pkgs.pkgsStatic.busybox}/bin/busybox:/run/healthcheck-busybox:ro"
         "/srv/lubelogger/data:/App/data"
         "/srv/lubelogger/keys:/root/.aspnet/DataProtection-Keys"
       ];
@@ -59,12 +71,18 @@ in
       environmentFiles = [ config.sops.secrets."lubelogger/postgres_env".path ];
       # PostgreSQL 18 stores PGDATA below this version-independent mount.
       volumes = [ "lubelogger-postgres-data:/var/lib/postgresql" ];
-      extraOptions = [
-        "--health-cmd=pg_isready -U lubelogger -d lubelogger"
-        "--health-interval=5s"
-        "--health-timeout=5s"
-        "--health-retries=12"
-      ];
+      healthcheck = {
+        command = [
+          "pg_isready"
+          "-U"
+          "lubelogger"
+          "-d"
+          "lubelogger"
+        ];
+        interval = "5s";
+        timeout = "5s";
+        retries = 12;
+      };
     };
   };
 

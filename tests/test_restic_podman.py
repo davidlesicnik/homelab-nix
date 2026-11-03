@@ -17,6 +17,29 @@ stage = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(stage)
 
 
+class PreflightTests(unittest.TestCase):
+    def test_failed_nas_preflight_does_not_reach_staging(self):
+        module = (Path(__file__).parents[1] / "modules/nixos/restic-podman.nix").read_text()
+        hook = module.split("backupPrepareCommand = ''", 1)[1].split("'';", 1)[0]
+        hook = hook.replace("${restic}", "fake_restic").replace("${staging}", "fake_stage")
+        functions = '''
+fake_restic() {
+    if [ "$1" = cat ]; then return "$CAT_STATUS"; fi
+    return "$INIT_STATUS"
+}
+fake_stage() { printf 'staged'; }
+'''
+        # Deliberately omit errexit, matching writeScript's execution environment.
+        for cat_status, init_status, expected in ((1, 7, 7), (1, 0, 0), (0, 7, 0)):
+            with self.subTest(cat=cat_status, init=init_status):
+                result = subprocess.run(
+                    ["bash", "-c", functions + hook], capture_output=True, text=True,
+                    env={**os.environ, "CAT_STATUS": str(cat_status), "INIT_STATUS": str(init_status)},
+                )
+                self.assertEqual(result.returncode, expected)
+                self.assertEqual(result.stdout, "staged" if expected == 0 else "")
+
+
 class StagingTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -30,6 +53,7 @@ class StagingTests(unittest.TestCase):
             "sources": [str(source)],
             "services": ["app.service", "db.service", "disabled.service"],
             "migrationMarkers": [],
+            "copyTimeoutSeconds": 3600,
         }
         Path(self.config["state"]).mkdir()
         self.pending = Path(self.config["state"]) / "stopped-services.json"
@@ -58,8 +82,21 @@ class StagingTests(unittest.TestCase):
         self.assertFalse(self.pending.exists())
         self.assertTrue((Path(self.config["stage"]) / "manifest.json").exists())
 
+    def test_copy_uses_configured_timeout_and_service_commands_keep_short_timeout(self):
+        self.config["copyTimeoutSeconds"] = 7200
+        real_run = stage.run
+
+        def command(args, **kwargs):
+            self.assertEqual(kwargs["timeout"], 7200 if args[0] == "rsync" else 300)
+            self.assertTrue(kwargs["check"])
+            return self.command(*args, **kwargs)
+
+        with patch.object(stage.subprocess, "run", side_effect=command):
+            real_run("systemctl", "show", "--property=ActiveState", "--value", "app.service")
+            stage.prepare(self.config)
+
     def test_copy_failure_and_timeout_resume_services_without_publishing_manifest(self):
-        for failure in (subprocess.CalledProcessError(23, "rsync"), subprocess.TimeoutExpired("rsync", 300)):
+        for failure in (subprocess.CalledProcessError(23, "rsync"), subprocess.TimeoutExpired("rsync", 3600)):
             with self.subTest(failure=type(failure).__name__):
                 def command(*args, **kwargs):
                     if args[0] == "rsync":

@@ -93,7 +93,7 @@ def prepare(config):
             destination.mkdir(parents=True, exist_ok=True)
             run("rsync", "--archive", "--hard-links", "--acls", "--xattrs",
                 "--numeric-ids", "--one-file-system", "--checksum", "--delete", "--",
-                f"{source}/", f"{destination}/")
+                f"{source}/", f"{destination}/", timeout=config["copyTimeoutSeconds"])
 
         for marker in config["migrationMarkers"]:
             source = Path(marker)

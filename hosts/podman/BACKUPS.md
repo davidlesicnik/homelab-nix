@@ -18,6 +18,9 @@ databases, attachments, and configuration are copied together. Services resume
 before uploading, pruning, or checking the NAS. Expect a nightly interruption
 to these apps, including AdGuard DNS and Caddy; the initial copy takes longer.
 The persistent staging copy needs space roughly equal to the selected data.
+Each source copy has a one-hour timeout, configurable with
+`homelab.podmanBackup.copyTimeoutSeconds`; service-control commands retain their
+five-minute timeout. The complete backup service is limited to six hours.
 
 Preparation refuses missing source directories. Previously active services are
 recorded durably before stopping; `finally` and systemd `ExecStopPost` both retry

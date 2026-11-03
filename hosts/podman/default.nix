@@ -6,6 +6,7 @@
     ../../modules/nixos/secrets.nix
     ../../modules/nixos/beszel-agent.nix
     ../../modules/nixos/containers.nix
+    ../../modules/nixos/restic-podman.nix
     ../../stacks/caddy
     ../../stacks/adguard
     ../../stacks/authelia

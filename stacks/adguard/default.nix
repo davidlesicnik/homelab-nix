@@ -2,6 +2,15 @@
 {
   virtualisation.oci-containers.containers.adguardhome = {
     imageManifest = ./Dockerfile;
+    # Exercise DNS as well as the admin HTTP listener, without credentials.
+    healthcheck.command = [
+      "/bin/sh"
+      "-ec"
+      ''
+        wget -q -T 3 -O /dev/null http://127.0.0.1:3001/login.html
+        nslookup example.com 192.168.10.20 >/dev/null
+      ''
+    ];
     # Preserve DNS client addresses instead of using rootless port forwarding.
     extraOptions = [ "--network=host" ];
     volumes = [

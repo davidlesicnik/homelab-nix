@@ -22,6 +22,10 @@ in
 
   virtualisation.oci-containers.containers.ddns-updater = {
     imageManifest = ./Dockerfile;
+    healthcheck.command = [
+      "/updater/ddns-updater"
+      "healthcheck"
+    ];
     networks = [ "proxy" ];
     labels."dockhand.url" = "https://ddns.lesicnik.eu";
     environment.TZ = "Europe/Ljubljana";

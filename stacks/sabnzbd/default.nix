@@ -2,6 +2,17 @@
 {
   virtualisation.oci-containers.containers.sabnzbd = {
     imageManifest = ./Dockerfile;
+    healthcheck.command = [
+      "curl"
+      "--fail"
+      "--silent"
+      "--show-error"
+      "--max-time"
+      "5"
+      "--output"
+      "/dev/null"
+      "http://127.0.0.1:8080/api?mode=version"
+    ];
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

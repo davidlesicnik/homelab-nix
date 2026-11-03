@@ -2,6 +2,17 @@
 {
   virtualisation.oci-containers.containers.sonarr = {
     imageManifest = ./Dockerfile;
+    healthcheck.command = [
+      "curl"
+      "--fail"
+      "--silent"
+      "--show-error"
+      "--max-time"
+      "5"
+      "--output"
+      "/dev/null"
+      "http://127.0.0.1:8989/ping"
+    ];
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

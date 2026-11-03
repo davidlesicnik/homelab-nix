@@ -2,6 +2,17 @@
 {
   virtualisation.oci-containers.containers.prowlarr = {
     imageManifest = ./Dockerfile;
+    healthcheck.command = [
+      "curl"
+      "--fail"
+      "--silent"
+      "--show-error"
+      "--max-time"
+      "5"
+      "--output"
+      "/dev/null"
+      "http://127.0.0.1:9696/ping"
+    ];
     networks = [ "proxy" ];
     environment = {
       PUID = "1000";

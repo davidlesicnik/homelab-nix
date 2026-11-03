@@ -8,6 +8,7 @@ Each `stacks/<name>/default.nix` is a NixOS module for one or more containers.
    additional containers in the same stack, use names such as `postgres.Dockerfile`.
 2. Define `virtualisation.oci-containers.containers` in its `default.nix`, using
    `imageManifest = ./Dockerfile;` instead of a literal `image`.
+   Set `healthcheck.command` to a verified probe available inside the image.
 3. Prefix container and volume names with the stack name.
 4. Join frontends to `networks = [ "proxy" ];`; keep databases on private networks.
 5. Import the stack in `hosts/<host>/default.nix`.
@@ -17,6 +18,35 @@ Each `stacks/<name>/default.nix` is a NixOS module for one or more containers.
 network. Images and volumes live on `/srv`; removing a stack preserves its volumes.
 The proxy network sends external DNS queries to host-networked AdGuard through
 pasta's host alias (`169.254.1.2`), avoiding stale host resolver settings.
+
+## Health checks
+
+Every container must define `healthcheck.command` as an argument list. Commands
+run directly; use `[ "/bin/sh" "-ec" "..." ]` only in images with a shell.
+Defaults are a 30-second interval, 10-second timeout, three failures and a
+60-second startup grace period. PostgreSQL retains its 5-second interval and
+12 retries. Checks report health without restarting services automatically.
+
+Application checks use local ping/health endpoints. Litara uses
+`/api/v1/setup/status`, which queries its database; LubeLogger's `/health` also
+checks database connectivity. HA dashboards check HTML and compare served
+`config.json` with the mounted file: unknown paths return frontend HTML, so
+`/health` is not a valid endpoint. These do not test the Home Assistant connection.
+AdGuard checks both its admin listener and a real DNS lookup through its LAN
+address. Kiosk, DDNS Updater and Beszel use their native probe commands.
+
+Caddy and LubeLogger mount a Nix-managed static BusyBox binary read-only for
+`wget`, without changing their images. Caddy's `/health` listener is bound to
+container loopback on port 8081 and is not published. It verifies HTTP serving;
+it does not test public TLS or individual upstream applications.
+
+Run as `containers` on the Podman host:
+
+```sh
+podman ps --format '{{.Names}}: {{.Status}}'
+podman healthcheck run sonarr
+podman inspect --format '{{json .State.Health}}' sonarr
+```
 
 ## Container image updates
 

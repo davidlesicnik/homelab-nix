@@ -141,6 +141,7 @@ in
         pkgs.rsync
         pkgs.systemd
         pkgs.coreutils
+        pkgs.diffutils
       ];
       # Verify a real restore of the recovery manifest before reporting success.
       postStart = ''

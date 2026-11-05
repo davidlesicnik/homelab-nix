@@ -113,10 +113,18 @@ stays on existing devices; no server-side data volume is required.
 
 The live NAS `config.json` is preserved in `ha-phone/secrets.yaml` and mounted
 read-only. Changes restart the service. Forgejo CI in the sister `ha-phone`
-repository publishes each successful `main` build and commits its exact commit
-and digest pin here using a repository-scoped deployment key. Superseded builds
-are skipped and concurrent Git updates retried. Dependabot ignores this image.
-Roll back by restoring a previous `ha-phone/Dockerfile` pin.
+repository publishes each successful `main` build and pushes its exact commit
+and digest pin on a `codex/deploy-ha-phone-<commit>` branch here. GitHub's
+`HA Phone image PR` workflow validates that only the matching image declaration
+changed, runs Nix checks and opens a deployment PR. Merge it to deploy through
+GitOps; `main` remains protected. Required `build` and `Plex PR checks` checks
+run on branch push, covering bot-created PRs without a personal token. Plex
+builds are skipped only after validating that its inputs are unchanged.
+
+The repository-scoped deployment key remains in Forgejo's
+`HOMELAB_NIX_DEPLOY_KEY` secret. Superseded builds are skipped, reruns reuse their
+existing branch, and push errors are reported. Dependabot ignores this image.
+To roll back, open a PR restoring a previous `ha-phone/Dockerfile` pin.
 
 The NAS Caddy forwards the hostname to the new Caddy. Its previous configuration
 and the stopped original container remain available for rollback.

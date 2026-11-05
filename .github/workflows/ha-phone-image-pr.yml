@@ -1,0 +1,75 @@
+name: HA Phone image PR
+
+on:
+  push:
+    branches: ['codex/deploy-ha-phone-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ha-phone-image-pr-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify that only the matching image pin changed
+        env:
+          IMAGE_BRANCH: ${{ github.ref_name }}
+        run: python3 scripts/check-ha-phone-image-pr.py
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - name: Validate the host configuration
+        run: |
+          python3 -m unittest discover -s tests -p 'test_*.py'
+          nix flake check --no-build --all-systems
+          nix eval --raw .#nixosConfigurations.podman.config.system.build.toplevel.drvPath
+          nix eval --raw .#packages.x86_64-linux.plex-lxc.drvPath
+
+  required:
+    name: Plex PR checks
+    needs: build
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require the validated image-only change
+        env:
+          RESULT: ${{ needs.build.result }}
+        run: test "$RESULT" = success
+
+  open-pr:
+    needs: [build, required]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Open the deployment PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          IMAGE_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -eu
+          sha=${IMAGE_BRANCH#codex/deploy-ha-phone-}
+          pr_url=$(gh pr list --head "$IMAGE_BRANCH" --base main --state all --json url --jq '.[0].url // empty')
+          if [ -z "$pr_url" ]; then
+            cat > "$RUNNER_TEMP/image-pr.md" <<EOF_BODY
+          Deploy the HA Phone image built from [source commit $sha](https://git.lesicnik.eu/david/ha-phone/commit/$sha), pinned by commit and registry digest.
+
+          Validation: only the matching HA Phone image declaration changed; publisher tests and Nix configuration evaluation passed. Plex build inputs are unchanged. Required checks run on the branch push so they also cover this bot-created PR.
+
+          Merge this PR to deploy through the Nix host's GitOps timer.
+          EOF_BODY
+            pr_url=$(gh pr create --head "$IMAGE_BRANCH" --base main --title "Deploy HA Phone ${sha:0:12}" --body-file "$RUNNER_TEMP/image-pr.md")
+          fi
+          echo "Deployment PR: $pr_url" >> "$GITHUB_STEP_SUMMARY"

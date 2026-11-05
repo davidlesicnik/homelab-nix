@@ -134,11 +134,18 @@ is preserved in `ha-tablet/secrets.yaml` and mounted read-only. Secret changes
 restart the service; application state does not require a persistent volume.
 
 Forgejo CI in the sister `ha-tablet` repository builds every push to `main`,
-publishes the image, then commits its exact commit tag and digest to
-`ha-tablet/Dockerfile` here. A repository-scoped GitHub deployment key is stored
-in Forgejo's `HOMELAB_NIX_DEPLOY_KEY` secret. Superseded builds are skipped and
-concurrent Git updates are retried. GitOps applies the new pin automatically;
-Dependabot ignores this image. To roll back, restore a previous `FROM` line.
+publishes the image, then pushes its exact commit tag and digest on a
+`codex/deploy-ha-tablet-<commit>` branch here. GitHub's `HA Tablet image PR`
+workflow validates that only the matching image declaration changed, runs Nix
+checks and opens a deployment PR. Merge it to deploy through GitOps; `main`
+remains protected. Required `build` and `Plex PR checks` checks run on the branch
+push, covering bot-created PRs without a personal token. Plex builds are skipped
+only after validating that its inputs are unchanged.
+
+The repository-scoped GitHub deployment key remains in Forgejo's
+`HOMELAB_NIX_DEPLOY_KEY` secret. Superseded builds are skipped, reruns reuse their
+existing branch, and push errors are reported. Dependabot ignores this image.
+To roll back, open a PR restoring a previous `FROM` line.
 
 The NAS Caddy forwards this hostname to the new Caddy. The old container and
 runtime configuration remain available for rollback.

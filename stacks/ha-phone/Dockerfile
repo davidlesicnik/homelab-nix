@@ -1,1 +1,1 @@
-FROM git.lesicnik.eu/david/ha-phone:29e1e2757cb12fe721f5084a3dd116284897c61e@sha256:5fc81866fcbfbfc90c17212f0d08bf4e70768dae5e6dac833bef7879226a4cf4
+FROM git.lesicnik.eu/david/ha-phone:5d9ea01073f411c4a215aaba66fa260adf958ded@sha256:5fc81866fcbfbfc90c17212f0d08bf4e70768dae5e6dac833bef7879226a4cf4

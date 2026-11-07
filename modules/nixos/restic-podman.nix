@@ -25,6 +25,10 @@ let
       ) container.volumes
     );
   stateful = lib.filterAttrs (_: container: sourcesFor container != [ ]) containers;
+  onlineSqlite = config.homelab.podmanBackup.onlineSqlite;
+  cold = lib.filterAttrs (
+    _: container: lib.any (source: !(builtins.hasAttr source onlineSqlite)) (sourcesFor container)
+  ) stateful;
   sources = lib.sort builtins.lessThan (
     lib.unique (lib.concatMap sourcesFor (builtins.attrValues stateful))
   );
@@ -32,9 +36,9 @@ let
   state = "/var/lib/restic-podman";
   manifest = pkgs.writeText "podman-backup-manifest.json" (
     builtins.toJSON {
-      inherit sources stage state;
+      inherit sources stage state onlineSqlite;
       copyTimeoutSeconds = config.homelab.podmanBackup.copyTimeoutSeconds;
-      services = map (container: "${container.serviceName}.service") (builtins.attrValues stateful);
+      services = map (container: "${container.serviceName}.service") (builtins.attrValues cold);
       migrationMarkers = lib.unique (
         map (source: "/srv/${builtins.elemAt (lib.splitString "/" source) 2}/.migration-complete") (
           lib.filter (source: !lib.hasPrefix volumeRoot source) sources
@@ -65,10 +69,17 @@ let
   ];
 in
 {
-  options.homelab.podmanBackup.copyTimeoutSeconds = lib.mkOption {
-    type = lib.types.ints.positive;
-    default = 3600;
-    description = "Maximum seconds for copying each Podman data source while applications are stopped.";
+  options.homelab.podmanBackup = {
+    copyTimeoutSeconds = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 3600;
+      description = "Maximum seconds per data source copy or SQLite online backup.";
+    };
+    onlineSqlite = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Map source directories to a SQLite database basename to back up online. Only use for apps whose other files can safely be copied live.";
+    };
   };
 
   config = {

@@ -14,13 +14,29 @@ not back up Plex, Home Assistant, Immich, or other services on separate hosts.
 Affected system services stop in dependency order while rsync makes a local
 copy at `/srv/.restic-podman`. PostgreSQL is shut down too: these are complete
 cold database backups, restored with the same PostgreSQL major version. SQLite
-databases, attachments, and configuration are copied together. Services resume
-before uploading, pruning, or checking the NAS. Expect a nightly interruption
+databases, attachments, and configuration are copied together, except for the
+online Authelia snapshot described below. Services resume before uploading,
+pruning, or checking the NAS. Expect a nightly interruption
 to these apps, including AdGuard DNS and Caddy; the initial copy takes longer.
 The persistent staging copy needs space roughly equal to the selected data.
 Each source copy has a one-hour timeout, configurable with
 `homelab.podmanBackup.copyTimeoutSeconds`; service-control commands retain their
 five-minute timeout. The complete backup service is limited to six hours.
+
+Authelia stays running during backups so its in-memory login sessions survive.
+Its live file copy and SQLite snapshot finish before any other services stop,
+so a busy database cannot prolong their downtime. The manifest is published
+only after both copy phases and service recovery succeed.
+`homelab.podmanBackup.onlineSqlite` opts `/srv/authelia/data` into SQLite's online
+backup API for `db.sqlite3`. The snapshot includes committed WAL transactions,
+is checked with `PRAGMA quick_check`, and atomically replaces the staged database.
+Raw database journals are excluded and old staged journals are removed. Other
+files (including the filesystem notifier) and the migration marker are still
+copied. Missing, corrupt, or persistently busy databases fail the backup rather
+than uploading an incomplete snapshot; online snapshots use the same per-copy timeout. Only
+opt an application into this mode when its other files are safe to copy live.
+Caddy and other applications still pause as above, so brief connectivity failures
+remain possible. An actual Authelia restart still clears login sessions.
 
 Preparation refuses missing source directories. Previously active services are
 recorded durably before stopping; `finally` and systemd `ExecStopPost` both retry
@@ -68,8 +84,8 @@ cat /var/lib/restic-podman/last-success
 restic-podman snapshots
 ```
 
-Manual runs also stop applications briefly. A failed backup/check leaves the
-unit failed and does not advance `last-success`; inspect this timestamp and
+Manual runs also stop applications briefly, except Authelia. A failed backup/check
+leaves the unit failed and does not advance `last-success`; inspect this timestamp and
 systemd failures in monitoring. No external notification destination is configured.
 If services could not resume, inspect `/var/lib/restic-podman/stopped-services.json`,
 fix their startup errors, and start just those units with `systemctl start`.
@@ -101,5 +117,12 @@ paths, volume mappings, images, and Git revision. Bind-mount data is under
 4. Start database/application units, check Podman health and application data,
    then re-enable the backup timer. Remove the temporary restore after validation.
 
-References: [Restic SFTP](https://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html#sftp)
-and [PostgreSQL cold backups](https://www.postgresql.org/docs/current/backup-file.html).
+For Authelia, stop the service before restoring, remove any old `db.sqlite3-wal`,
+`db.sqlite3-shm`, and `db.sqlite3-journal` files, and replace the database with the
+snapshot. Restore its migration marker and retain the matching SOPS storage
+encryption key. Restored MFA registrations and OIDC data survive; browser sessions
+must be established again.
+
+References: [Restic SFTP](https://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html#sftp),
+[PostgreSQL cold backups](https://www.postgresql.org/docs/current/backup-file.html),
+and [SQLite online backups](https://www.sqlite.org/backup.html).

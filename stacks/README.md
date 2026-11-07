@@ -184,7 +184,10 @@ Caddy serves `https://login.lesicnik.eu` through `authelia:9091` on `proxy`.
 The NAS Caddy forwards the login portal and HA Phone's authorization requests
 to the new host. Existing OIDC issuer, clients, keys and callbacks are preserved.
 Sessions use the original in-memory provider, so migration or restart requires
-signing in again. Password changes must be applied to the encrypted user
+signing in again. Nightly Restic backups use SQLite's online backup API and leave
+Authelia running, preserving these sessions while protecting MFA and OIDC state.
+Caddy still pauses during backups, which can briefly interrupt access.
+Password changes must be applied to the encrypted user
 database through GitOps, matching the original read-only user file.
 
 ```sh

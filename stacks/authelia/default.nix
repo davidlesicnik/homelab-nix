@@ -24,6 +24,10 @@ let
     (builtins.toJSON settings);
 in
 {
+  # Preserve in-memory sessions during nightly backups. MFA/OIDC state is
+  # snapshotted with SQLite's online backup API instead of stopping Authelia.
+  homelab.podmanBackup.onlineSqlite."/srv/authelia/data" = "db.sqlite3";
+
   sops.secrets = lib.genAttrs (map (name: "authelia/${name}") (secretNames ++ [ "users_database" ])) (name: {
     sopsFile = ./secrets.yaml;
     key = lib.removePrefix "authelia/" name;

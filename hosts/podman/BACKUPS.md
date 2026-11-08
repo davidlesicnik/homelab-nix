@@ -23,7 +23,7 @@ Each source copy has a one-hour timeout, configurable with
 `homelab.podmanBackup.copyTimeoutSeconds`; service-control commands retain their
 five-minute timeout. The complete backup service is limited to six hours.
 
-Authelia stays running during backups so its in-memory login sessions survive.
+Authelia stays running during backups to keep authentication available.
 Its live file copy and SQLite snapshot finish before any other services stop,
 so a busy database cannot prolong their downtime. The manifest is published
 only after both copy phases and service recovery succeed.
@@ -36,7 +36,10 @@ copied. Missing, corrupt, or persistently busy databases fail the backup rather
 than uploading an incomplete snapshot; online snapshots use the same per-copy timeout. Only
 opt an application into this mode when its other files are safe to copy live.
 Caddy and other applications still pause as above, so brief connectivity failures
-remain possible. An actual Authelia restart still clears login sessions.
+remain possible. Redis-backed sessions survive Authelia restarts. Redis's native
+state under `/var/lib/redis-authelia` is not included in these application backups;
+losing that state requires signing in again, while the SQLite backup restores MFA
+registrations and OIDC data.
 
 Preparation refuses missing source directories. Previously active services are
 recorded durably before stopping; `finally` and systemd `ExecStopPost` both retry

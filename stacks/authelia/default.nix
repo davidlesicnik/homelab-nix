@@ -24,9 +24,30 @@ let
     (builtins.toJSON settings);
 in
 {
-  # Preserve in-memory sessions during nightly backups. MFA/OIDC state is
+  # Keep authentication available during nightly backups. MFA/OIDC state is
   # snapshotted with SQLite's online backup API instead of stopping Authelia.
   homelab.podmanBackup.onlineSqlite."/srv/authelia/data" = "db.sqlite3";
+
+  # A local socket limits access to the container user without a TCP listener.
+  # Session state persists independently of the Authelia container and backups.
+  services.redis.servers.authelia = {
+    enable = true;
+    port = 0;
+    group = "containers";
+    unixSocket = "/run/redis-authelia/redis.sock";
+    unixSocketPerm = 660;
+    appendOnly = true;
+    appendFsync = "everysec";
+    save = [ ];
+    settings.maxmemory-policy = "noeviction";
+  };
+
+  systemd.services.redis-authelia.serviceConfig = {
+    # Keep the directory inode mounted into Authelia across Redis restarts.
+    RuntimeDirectoryPreserve = "yes";
+    Restart = "on-failure";
+    RestartSec = "2s";
+  };
 
   sops.secrets = lib.genAttrs (map (name: "authelia/${name}") (secretNames ++ [ "users_database" ])) (name: {
     sopsFile = ./secrets.yaml;
@@ -66,6 +87,7 @@ in
     volumes = [
       "${config.sops.templates."authelia-configuration.yml".path}:/config/configuration.yml:ro"
       "${config.sops.secrets."authelia/users_database".path}:/config/users_database.yml:ro"
+      "/run/redis-authelia:/run/redis-authelia:ro"
       "/srv/authelia/data:/data"
     ];
     labels."dockhand.url" = "https://login.lesicnik.eu";
@@ -73,7 +95,10 @@ in
 
   systemd.services.podman-authelia = {
     requires = [ "sops-install-secrets.service" ];
-    after = [ "sops-install-secrets.service" ];
+    # Wants starts Redis first without stopping Authelia when Redis restarts;
+    # its Redis client reconnects to the socket in the preserved directory.
+    wants = [ "redis-authelia.service" ];
+    after = [ "sops-install-secrets.service" "redis-authelia.service" ];
     restartTriggers = [ config.sops.templates."authelia-configuration.yml".file ];
     # Never initialize a fresh identity store instead of the migrated database.
     unitConfig.ConditionPathExists = "/srv/authelia/.migration-complete";

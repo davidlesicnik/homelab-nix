@@ -27,6 +27,9 @@
     inactivity = "8760h";
     expiration = "8760h";
     remember_me = "8760h";
+    redis = {
+      host = "/run/redis-authelia/redis.sock";
+    };
     cookies = [
       {
         domain = "lesicnik.eu";

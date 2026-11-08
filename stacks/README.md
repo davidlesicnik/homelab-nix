@@ -183,15 +183,27 @@ The original NAS container and data remain available for rollback.
 Caddy serves `https://login.lesicnik.eu` through `authelia:9091` on `proxy`.
 The NAS Caddy forwards the login portal and HA Phone's authorization requests
 to the new host. Existing OIDC issuer, clients, keys and callbacks are preserved.
-Sessions use the original in-memory provider, so migration or restart requires
-signing in again. Nightly Restic backups use SQLite's online backup API and leave
-Authelia running, preserving these sessions while protecting MFA and OIDC state.
+Sessions use a dedicated native `redis-authelia.service` through a Unix socket;
+Redis has no TCP listener. Append-only state in `/var/lib/redis-authelia` preserves
+sessions across Authelia deployments, Redis restarts and host reboots. A sudden
+power loss may lose the last second of session updates. The socket directory is
+preserved during Redis restarts so the container can reconnect without recreation.
+The session secret, cookie name and domain must stay unchanged to retain logins.
+Switching from the previous memory store requires signing in once on each device.
+Select **Remember me** when signing in so browser restarts retain the login cookie;
+session, inactivity and remembered lifetimes remain one year.
+
+Nightly Restic backups use SQLite's online backup API and leave Authelia running,
+protecting MFA and OIDC state. Redis session state is intentionally outside these
+backups; losing it requires signing in again, not re-enrolling MFA. Restoring old
+session state could also revive previously revoked logins.
 Caddy still pauses during backups, which can briefly interrupt access.
 Password changes must be applied to the encrypted user
 database through GitOps, matching the original read-only user file.
 
 ```sh
 systemctl status podman-authelia.service
+systemctl status redis-authelia.service
 journalctl -u podman-authelia.service -n 30 --no-pager
 ```
 

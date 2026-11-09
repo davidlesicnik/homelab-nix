@@ -225,13 +225,13 @@ port 3001 for the admin interface**, and **192.168.10.20, port 53 for DNS**;
 port 80 is already occupied by Caddy. Create your account in the wizard.
 Caddy serves `https://adguard.lesicnik.eu` through `host.containers.internal:3001`
 after setup. Close setup port 3000 again when finished.
-Configure upstream resolvers explicitly rather than using the
-host resolver, which still points to the old DNS server.
-
-The old DNS service, router/DHCP settings, host nameserver and
-`dns.lesicnik.eu` DoH route remain unchanged. Verify DNS over TCP and UDP on
-`.20` before switching clients. Encrypted DNS requires separate configuration;
-no unused encrypted-DNS or DHCP ports are opened for this bare service.
+Configure AdGuard's upstream resolvers explicitly to avoid a DNS loop.
+The host tries AdGuard (`192.168.10.20`) first, then Cloudflare (`1.1.1.1`)
+when AdGuard is unavailable. Keep resolver rotation disabled so AdGuard stays
+primary. This lets Podman download AdGuard updates while its container is stopped.
+The fallback applies only to the host; router/DHCP settings and the proxy
+network's AdGuard resolver are configured separately. Encrypted DNS requires
+separate configuration; no unused encrypted-DNS or DHCP ports are opened.
 
 ```sh
 systemctl status podman-adguardhome.service

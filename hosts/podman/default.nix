@@ -45,7 +45,12 @@
       address = "192.168.10.1";
       interface = "ens18";
     };
-    nameservers = [ "192.168.10.20" ];
+    # Keep AdGuard first; image pulls must still resolve while it is stopped.
+    # Do not enable resolver rotation: Cloudflare is only a fallback.
+    nameservers = [
+      "192.168.10.20"
+      "1.1.1.1"
+    ];
   };
 
   users.users.root.openssh.authorizedKeys.keys = [

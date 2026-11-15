@@ -1,1 +1,1 @@
-FROM git.lesicnik.eu/david/ha-tablet:c9b9f8ca509448af8cb785067f5f3dcd7ce52807@sha256:f4c0f8700e770f1f106a4c07464bc49cd412eb88181f6caf5282d38dd0e04f18
+FROM git.lesicnik.eu/david/ha-tablet:ac4853c9b66e95896d5fc968167b9b14f87d5094@sha256:3d7dd4a284aebe547b99bb754dddffdff127d36663694ec0485047eea5d87829

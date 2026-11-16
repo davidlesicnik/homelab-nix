@@ -55,7 +55,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
       - run: python3 -m unittest discover -s tests -p 'test_plex_update.py'
       - run: nix build --print-build-logs .#plex-lxc
 
@@ -92,7 +92,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
       - run: python3 -m unittest discover -s tests -p 'test_plex_update.py'
       - name: Build Plex system
         run: nix build --out-link result-system --print-build-logs .#nixosConfigurations.plex.config.system.build.toplevel

@@ -1,1 +1,1 @@
-FROM ghcr.io/damongolding/immich-kiosk:0.47.0
+FROM ghcr.io/damongolding/immich-kiosk:0.47.1

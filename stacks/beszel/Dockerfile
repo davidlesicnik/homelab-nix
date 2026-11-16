@@ -1,1 +1,1 @@
-FROM docker.io/henrygd/beszel:0.21.1
+FROM docker.io/henrygd/beszel:0.21.2

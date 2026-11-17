@@ -20,6 +20,10 @@ let
       proxied = true;
     }
     {
+      domain = "mail-mcp.lesicnik.eu";
+      proxied = true;
+    }
+    {
       domain = "vpn.lesicnik.eu";
       proxied = false;
     }

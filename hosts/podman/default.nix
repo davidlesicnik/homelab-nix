@@ -10,6 +10,7 @@
     ../../stacks/caddy
     ../../stacks/adguard
     ../../stacks/authelia
+    ../../stacks/your-mail-mcp
     ../../stacks/ha-phone
     ../../stacks/ha-tablet
     ../../stacks/ddns-updater

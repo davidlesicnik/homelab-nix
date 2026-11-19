@@ -64,6 +64,13 @@ host on every PR. It builds and validates Caddy only when its files, dedicated i
 updater, or CI workflows change, or when manually dispatched. Application startup
 and database compatibility still need runtime checks.
 
+## Mail MCP
+
+[`your-mail-mcp`](your-mail-mcp/README.md) mirrors mailbox.org mail into a
+read-only MCP index at `https://mail-mcp.lesicnik.eu/mcp`. It uses built-in OAuth;
+Caddy rejects paths outside MCP/OAuth, including attachment downloads. Configure
+the encrypted mailbox credentials before expecting mail search results.
+
 ## Caddy
 
 | File | Purpose |

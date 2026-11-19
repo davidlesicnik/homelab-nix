@@ -1,0 +1,40 @@
+mail-mcp.lesicnik.eu {
+    import cert
+
+    @mcp {
+        path /mcp
+        method GET POST DELETE
+    }
+    handle @mcp {
+        reverse_proxy your-mail-mcp:8080
+    }
+
+    @discovery {
+        path /.well-known/oauth-authorization-server /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/mcp
+        method GET HEAD
+    }
+    handle @discovery {
+        reverse_proxy your-mail-mcp:8080
+    }
+
+    @authorize {
+        path /authorize
+        method GET POST
+    }
+    handle @authorize {
+        reverse_proxy your-mail-mcp:8080
+    }
+
+    @token {
+        path /register /token
+        method POST
+    }
+    handle @token {
+        reverse_proxy your-mail-mcp:8080
+    }
+
+    # Includes signed attachment downloads and any future application routes.
+    handle {
+        respond 404
+    }
+}

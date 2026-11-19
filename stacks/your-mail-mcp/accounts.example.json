@@ -1,0 +1,12 @@
+{
+  "accounts": [
+    {
+      "name": "mailbox",
+      "host": "imap.mailbox.org",
+      "port": 993,
+      "tls": "imaps",
+      "user": "your-main-email@example.org",
+      "password": "your-imap-app-password"
+    }
+  ]
+}

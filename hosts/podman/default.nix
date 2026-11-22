@@ -8,6 +8,7 @@
     ../../modules/nixos/containers.nix
     ../../modules/nixos/restic-podman.nix
     ../../stacks/caddy
+    ../../stacks/codex
     ../../stacks/adguard
     ../../stacks/authelia
     ../../stacks/ha-phone

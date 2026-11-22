@@ -64,6 +64,47 @@ host on every PR. It builds and validates Caddy only when its files, dedicated i
 updater, or CI workflows change, or when manually dispatched. Application startup
 and database compatibility still need runtime checks.
 
+## Codex Remote
+
+The rootless `codex` container starts on boot as `homelab-codex` and connects
+outbound to ChatGPT. Its home directory (including login and pairing state)
+lives in `codex-home`. Repositories and uncommitted changes under `/workspace`
+live in `codex-repos`. The host's 01:00 Europe/Ljubljana Restic job briefly
+stops Codex to copy these volumes and restarts it afterward. Schedule long
+unattended tasks around this interruption.
+
+After GitOps applies the change, connect once and sign in with the ChatGPT
+account and workspace you'll use on the phone.
+
+```sh
+ssh containers@192.168.10.20
+podman exec -it codex codex login --device-auth
+podman restart codex
+podman wait --condition=healthy codex
+podman exec -it codex codex remote-control pair
+```
+
+Open Remote in the ChatGPT app, add a computer with the displayed code, and
+select `homelab-codex`. Rerun the pairing command if the code expires.
+
+To work on private GitHub repositories, authenticate Git once inside the container.
+
+```sh
+podman exec -it codex gh auth login --hostname github.com --git-protocol https --web
+podman exec codex gh auth setup-git
+```
+
+For example, clone the homelab repository into the persistent workspace.
+
+```sh
+podman exec codex git clone https://github.com/davidlesicnik/homelab-nix.git /workspace/homelab-nix
+```
+
+Choose `/workspace/homelab-nix` as the project when starting a task. Clone
+additional repositories under `/workspace` from the host or through a Remote
+task. To check the local server, run `podman healthcheck run codex`. To see
+startup or connection errors, run `podman logs --tail 50 codex`.
+
 ## Caddy
 
 | File | Purpose |

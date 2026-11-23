@@ -1,1 +1,1 @@
-FROM docker.io/fnsys/dockhand:v1.0.57
+FROM docker.io/fnsys/dockhand:v1.0.58

@@ -1,0 +1,5 @@
+jellyfin.lesicnik.eu {
+    # Jellyfin can put access tokens in playback URLs.
+    encode zstd gzip
+    reverse_proxy 192.168.10.31:8096
+}

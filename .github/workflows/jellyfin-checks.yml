@@ -1,0 +1,29 @@
+name: Jellyfin checks
+
+on:
+  pull_request:
+    paths:
+      - 'hosts/jellyfin/**'
+      - 'flake.nix'
+      - 'flake.lock'
+      - '.github/workflows/jellyfin-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-jellyfin:
+    name: Build Jellyfin bundle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - run: nix build --no-link --print-build-logs .#jellyfin-debian
+      - name: Report Jellyfin version
+        run: |
+          version=$(nix eval --raw .#packages.x86_64-linux.jellyfin-debian.jellyfinVersion)
+          printf 'Jellyfin version: %s\n' "$version" >> "$GITHUB_STEP_SUMMARY"

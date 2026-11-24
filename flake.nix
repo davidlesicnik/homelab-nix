@@ -55,6 +55,7 @@
         caddy = caddyPkgs.callPackage ./stacks/caddy/package.nix { };
         caddy-image = caddyPkgs.callPackage ./stacks/caddy/image.nix { };
         plex-lxc = self.nixosConfigurations.plex.config.system.build.tarball;
+        jellyfin-debian = pkgs.callPackage ./hosts/jellyfin { };
       };
 
       checks.x86_64-linux.caddy-config = caddyPkgs.callPackage ./stacks/caddy/config.nix { };

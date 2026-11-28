@@ -136,6 +136,23 @@
           token_endpoint_auth_method = "client_secret_basic";
         }
         {
+          client_id = "jellyfin";
+          client_name = "Jellyfin";
+          client_secret = (secret "oidc_client_jellyfin_json");
+          public = false;
+          authorization_policy = "two_factor";
+          redirect_uris = [
+            "https://jellyfin.lesicnik.eu/sso/OIDC/Callback/authelia"
+          ];
+          scopes = [ "openid" "profile" "email" "groups" ];
+          response_types = [ "code" ];
+          grant_types = [ "authorization_code" ];
+          require_pkce = true;
+          pkce_challenge_method = "S256";
+          token_endpoint_auth_method = "client_secret_basic";
+          userinfo_signed_response_alg = "none";
+        }
+        {
           client_id = "proxmox-pve";
           client_name = "Proxmox VE";
           client_secret = (secret "oidc_client_proxmox_ve_json");

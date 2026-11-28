@@ -9,6 +9,7 @@ let
     "oidc_client_bootstrap_client_json"
     "oidc_client_lubelogger_json"
     "oidc_client_home_assistant_json"
+    "oidc_client_jellyfin_json"
     "oidc_client_proxmox_ve_json"
     "oidc_client_proxmox_backup_server_json"
     "oidc_client_beszel_json"
